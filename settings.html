@@ -746,13 +746,28 @@
     }
 
     .activity-tag.running {
-      background: rgba(56, 189, 248, 0.12);
+      background: rgba(56, 189, 248, 0.15);
       color: var(--accent-cyan);
     }
 
-    .activity-tag.done {
-      background: rgba(16, 185, 129, 0.1);
-      color: var(--accent-green);
+    .activity-tag.done, .activity-tag.ready {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .activity-tag.needs_input {
+      background: rgba(234, 179, 8, 0.18);
+      color: #facc15;
+    }
+
+    .activity-tag.blocked {
+      background: rgba(239, 68, 68, 0.18);
+      color: #f87171;
+    }
+
+    .activity-tag.idle {
+      background: rgba(148, 163, 184, 0.12);
+      color: #94a3b8;
     }
 
     .activity-time {
@@ -969,6 +984,17 @@
 
             <div class="setting-item">
               <div class="setting-info">
+                <h4>โหมด Mini (ซ่อนตัวสัตว์เลี้ยง)</h4>
+                <p>ยุบขนาดเหลือเฉพาะแถบควบคุมลอย Glassmorphic ที่มุมจอ</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="miniModeToggle" onchange="toggleMiniModeSetting(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
                 <h4>ขนาดสัตว์เลี้ยง</h4>
                 <p>ปรับขนาดตัวละครบนหน้าจอเดสก์ท็อป</p>
               </div>
@@ -994,11 +1020,51 @@
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
             รีเฟรช
           </button>
+          <button class="btn btn-accent" onclick="openCreatePetModal()" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; font-weight: 600; padding: 6px 14px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            ✨ สร้างด้วย AI
+          </button>
           <button class="btn btn-primary" onclick="triggerUpload()">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            เพิ่ม Pet
+            นำเข้าภาพ
           </button>
           <input type="file" id="fileUploadInput" accept="image/png,image/webp" style="display:none;" onchange="handleFileUpload(this.files[0])">
+        </div>
+      </div>
+
+      <!-- Create Pet with AI Card (Phase 4) -->
+      <div id="aiPetModal" style="display:none; background: #16161c; border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 14px; padding: 18px; margin: 12px 0 18px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 14px; font-weight: 700; color: #f4f4f5; display: flex; align-items: center; gap: 8px;">
+            <span>🎨</span> สั่งสร้างสัตว์เลี้ยง Desktop Pet ด้วย AI (Create Pet with AI)
+          </h4>
+          <button class="btn btn-secondary" style="padding: 2px 10px; font-size: 11px;" onclick="closeCreatePetModal()">ปิด</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 11.5px; color: #a1a1aa; font-weight: 600; display: block; margin-bottom: 4px;">คำอธิบายสัตว์เลี้ยง (Prompt):</label>
+            <textarea id="aiPromptInput" rows="2" style="width: 100%; background: #0c0c0f; border: 1px solid #383a46; border-radius: 8px; color: #fff; padding: 8px 10px; font-size: 12.5px; resize: none;" placeholder="เช่น ลูกแมวน้อยสีส้ม สวมหมวกพ่อมดจิ๋ว สไตล์พิกเซลอาร์ต"></textarea>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 11.5px; color: #a1a1aa; font-weight: 600; display: block; margin-bottom: 4px;">ชื่อสัตว์เลี้ยง (Name):</label>
+              <input type="text" id="aiNameInput" style="width: 100%; background: #0c0c0f; border: 1px solid #383a46; border-radius: 8px; color: #fff; padding: 7px 10px; font-size: 12px;" placeholder="เช่น Mikan Cat">
+            </div>
+            <div>
+              <label style="font-size: 11.5px; color: #a1a1aa; font-weight: 600; display: block; margin-bottom: 4px;">สไตล์ภาพ (Art Style):</label>
+              <select id="aiStyleSelect" style="width: 100%; background: #0c0c0f; border: 1px solid #383a46; border-radius: 8px; color: #fff; padding: 7px 8px; font-size: 12px;">
+                <option value="pixel_art">Pixel Art (Hime Gold Standard 192x208)</option>
+                <option value="chibi_anime">Chibi Anime (Cyber VISOR)</option>
+                <option value="cyber_mascot">Cyberpunk Robot Companion</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 4px;">
+            <span id="aiGenStatus" style="font-size: 12px; color: #c084fc;"></span>
+            <button class="btn btn-accent" id="btnRunAiGen" onclick="submitCreatePetAi()" style="background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border: none; padding: 8px 20px; font-weight: 600;">
+              🚀 สั่ง AI สร้างสไปรต์ชีต 9 แถวทันที
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1539,24 +1605,83 @@
 
     // --- Activity History Implementation ---
 
+    function openCreatePetModal() {
+      document.getElementById('aiPetModal').style.display = 'block';
+      document.getElementById('aiPromptInput').focus();
+    }
+
+    function closeCreatePetModal() {
+      document.getElementById('aiPetModal').style.display = 'none';
+      document.getElementById('aiGenStatus').innerText = '';
+    }
+
+    async function submitCreatePetAi() {
+      const prompt = document.getElementById('aiPromptInput').value.trim();
+      const name = document.getElementById('aiNameInput').value.trim() || prompt.slice(0, 14);
+      const style = document.getElementById('aiStyleSelect').value;
+      const statusSpan = document.getElementById('aiGenStatus');
+      const genBtn = document.getElementById('btnRunAiGen');
+
+      if (!prompt) {
+        showToast('กรุณากรอกคำอธิบายสัตว์เลี้ยง (Prompt)');
+        return;
+      }
+
+      genBtn.disabled = true;
+      statusSpan.innerText = '⚡ AI กำลังสร้างสไปรต์ชีต 9 แถวตามมาตรฐาน Hime...';
+
+      try {
+        const resp = await api('/api/create-pet-ai', { prompt, name, style });
+        if (resp && resp.status === 'success') {
+          showToast(`สร้างสัตว์เลี้ยง "${name}" สำเร็จ! ✨`);
+          closeCreatePetModal();
+          await loadData(true);
+          await selectPet(resp.pet_id);
+        } else {
+          showToast('เกิดข้อผิดพลาด: ' + (resp.error || 'ไม่สามารถสร้างได้'));
+          statusSpan.innerText = resp.error || 'ล้มเหลว';
+        }
+      } catch (err) {
+        showToast('การเชื่อมต่อล้มเหลว: ' + err.message);
+        statusSpan.innerText = err.message;
+      } finally {
+        genBtn.disabled = false;
+      }
+    }
+
+    async function toggleMiniModeSetting(checked) {
+      await api('/api/settings', { mini_mode: checked });
+      showToast(checked ? 'เปิดโหมด Mini (ซ่อนตัวสัตว์เลี้ยง)' : 'ปิดโหมด Mini (แสดงสัตว์เลี้ยง)');
+    }
+
     async function loadActivity() {
       const list = document.getElementById('activityList');
       try {
         const data = await api('/api/activity');
-        if (!data || !data.activity || !data.activity.length) {
+        const threads = data.threads || [];
+        if (!threads.length) {
           list.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; padding: 6px;">ยังไม่มีกิจกรรมล่าสุด</div>';
           return;
         }
 
-        list.innerHTML = data.activity.map(a => `
-          <div class="activity-row">
-            <div>
-              <span class="activity-tag ${a.status === 'running' ? 'running' : 'done'}">
-                ${a.status === 'running' ? 'กำลังทำงาน' : 'เสร็จสิ้น'}
+        const statusLabels = {
+          'needs_input': '💬 รอตอบกลับ',
+          'blocked': '⚠️ ติดขัด',
+          'ready': '✨ เสร็จแล้ว',
+          'running': '⚡ กำลังคิด',
+          'idle': 'ก่อนหน้า'
+        };
+
+        list.innerHTML = threads.map(t => `
+          <div class="activity-row" style="cursor: pointer;" onclick="api('/api/open-antigravity')">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="activity-tag ${t.status}">
+                ${statusLabels[t.status] || t.status}
               </span>
-              <strong style="margin-left: 8px; color: var(--text-main);">#${a.id.slice(0, 8)}</strong>
+              <strong style="color: var(--text-main); font-size: 12.5px;">${t.title}</strong>
+              <span style="color: var(--text-dim); font-size: 11px;">(${t.summary})</span>
             </div>
-            <time class="activity-time">${new Date(a.updated_at * 1000).toLocaleTimeString('th-TH')}</time>
+            <time class="activity-time">${t.age_text || 'ล่าสุด'}</time>
           </div>
         `).join('');
       } catch (e) {

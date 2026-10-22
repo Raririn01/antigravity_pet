@@ -1,5 +1,3 @@
-"""Local Antigravity activity, Pet settings, and CLI Quick Chat bridge."""
-
 import os
 import glob
 import json
@@ -9,12 +7,15 @@ import threading
 import uuid
 import subprocess
 import shutil
+import re
+import sqlite3
 from urllib.parse import parse_qs, urlsplit
 from PIL import Image
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable, Dict, Any, List
 
 from spritesheet import validate_spritesheet
+from default_pet_generator import generate_custom_pet_sheet
 
 # Base directories
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -85,13 +86,28 @@ def available_pets():
 
 
 class AntigravityWatcher:
-    """Watches the Antigravity conversation transcripts to infer agent state."""
+    """
+    Watches Antigravity transcripts across active threads to infer agent state
+    and provide the Activity Tray with prioritized multi-thread status.
+    
+    Status Lifecycle:
+      - 'needs_input' (Row 6 waiting): Agent paused waiting for user input / ask_question
+      - 'blocked'     (Row 5 failed): Agent encountered error or blocked state
+      - 'ready'       (Row 8 review): Agent finished task, ready for user review
+      - 'running'     (Row 7 thinking): Agent actively working / tool calling
+      - 'idle'        (Row 0 idle): Calm resting state
+      - 'sleep'       (Row 6 waiting / resting): Inactive > 90s
+      
+    Thread Priority:
+      needs_input (100) > blocked (80) > ready (60) > running (40) > idle (10)
+    """
 
     def __init__(self, brain_root: Optional[str] = None, on_state_change: Optional[Callable[[str, str], None]] = None):
         user_profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
         self.brain_roots = [
+            os.path.join(user_profile, ".gemini", "antigravity-ide", "brain"),
             os.path.join(user_profile, ".gemini", "antigravity", "brain"),
-            os.path.join(user_profile, ".gemini", "antigravity-ide", "brain")
+            os.path.join(user_profile, ".gemini", "antigravity-cli", "brain")
         ]
         if brain_root and brain_root not in self.brain_roots:
             self.brain_roots.insert(0, brain_root)
@@ -99,95 +115,203 @@ class AntigravityWatcher:
         self.on_state_change = on_state_change
         
         self.current_state = "idle"
+        self.state_reason = "พร้อมใช้งาน"
         self.active_transcript_path: Optional[str] = None
-        self.last_file_pos = 0
-        self.last_step_index = -1
         self.last_activity_time = time.time()
         self.turn_in_progress = False
+        
+        self.recent_threads: List[Dict[str, Any]] = []
+        self._summary_cache: Dict[str, Dict[str, str]] = {}
+        self._last_summary_fetch = 0.0
 
-    def find_latest_transcript(self) -> Optional[str]:
+    def _refresh_summary_cache(self):
+        now = time.time()
+        if now - self._last_summary_fetch < 4.0 and self._summary_cache:
+            return
+        self._last_summary_fetch = now
+
+        db_paths = [
+            os.path.expanduser("~/.gemini/antigravity/conversation_summaries.db"),
+            os.path.expanduser("~/.gemini/antigravity-cli/conversation_summaries.db"),
+        ]
+        for db in db_paths:
+            if os.path.isfile(db):
+                try:
+                    conn = sqlite3.connect(db, timeout=0.8)
+                    cursor = conn.execute("SELECT conversation_id, title, preview FROM conversation_summaries")
+                    for cid, title, prev in cursor.fetchall():
+                        if cid and (cid not in self._summary_cache or title):
+                            self._summary_cache[cid] = {"title": title or "", "preview": prev or ""}
+                    conn.close()
+                except Exception:
+                    pass
+
+    def get_recent_transcripts(self, limit: int = 10) -> List[str]:
         all_matches = []
         for root in self.brain_roots:
-            pattern = os.path.join(root, "*", ".system_generated", "logs", "transcript.jsonl")
-            all_matches.extend(glob.glob(pattern))
+            if os.path.isdir(root):
+                pattern = os.path.join(root, "*", ".system_generated", "logs", "transcript.jsonl")
+                all_matches.extend(glob.glob(pattern))
         if not all_matches:
-            return None
+            return []
         all_matches.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-        return all_matches[0]
+        return all_matches[:limit]
+
+    def _clean_title(self, raw_text: str) -> str:
+        if not raw_text:
+            return ""
+        text = re.sub(r"<[^>]+>", "", raw_text)
+        text = re.sub(r"@\[[^\]]+\]", "", text)
+        text = text.replace("\r", " ").replace("\n", " ").strip()
+        text = re.sub(r"\s+", " ", text)
+        if len(text) > 40:
+            text = text[:38] + "..."
+        return text
+
+    def analyze_thread(self, transcript_path: str) -> Dict[str, Any]:
+        cid = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(transcript_path))))
+        mtime = os.path.getmtime(transcript_path)
+        age = time.time() - mtime
+        
+        cached = self._summary_cache.get(cid, {})
+        title = cached.get("title", "")
+        preview = cached.get("preview", "")
+
+        status = "idle"
+        summary = "การสนทนาก่อนหน้า"
+        priority = 10
+        badge_color = "#71717a"
+
+        try:
+            with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+                lines = [l.strip() for l in f if l.strip()]
+
+            if lines:
+                if not title:
+                    for l in lines[:6]:
+                        try:
+                            d = json.loads(l)
+                            if d.get("type") == "USER_INPUT":
+                                title = self._clean_title(d.get("content", ""))
+                                break
+                        except Exception:
+                            pass
+
+                recent = []
+                for l in lines[-4:]:
+                    try:
+                        recent.append(json.loads(l))
+                    except Exception:
+                        pass
+
+                if recent:
+                    last_step = recent[-1]
+                    last_type = last_step.get("type", "")
+                    last_status = last_step.get("status", "")
+                    tool_calls = last_step.get("tool_calls", [])
+
+                    has_ask = any(t.get("name") == "ask_question" for t in tool_calls)
+                    is_ask_step = (last_type == "ASK_QUESTION")
+
+                    if (has_ask or is_ask_step) and age < 600.0:
+                        status = "needs_input"
+                        summary = "รอการตอบกลับของคุณ... 🔔"
+                        priority = 100
+                        badge_color = "#facc15"
+                    elif last_status == "ERROR" and age < 300.0:
+                        status = "blocked"
+                        summary = "พบข้อผิดพลาด / หยุดการทำงาน ⚠️"
+                        priority = 80
+                        badge_color = "#ef4444"
+                    elif age < 20.0 and (last_type in ("USER_INPUT", "RUN_COMMAND", "VIEW_FILE", "GREP_SEARCH", "REPLACE_FILE_CONTENT", "MULTI_REPLACE_FILE_CONTENT") or tool_calls):
+                        status = "running"
+                        tool_name = tool_calls[0].get("name") if tool_calls else "ประมวลผล"
+                        summary = f"กำลังคิด ({tool_name})... ⚡"
+                        priority = 40
+                        badge_color = "#38bdf8"
+                    elif age < 180.0:
+                        status = "ready"
+                        summary = "ทำงานเสร็จแล้ว! พร้อมดู ✨"
+                        priority = 60
+                        badge_color = "#22c55e"
+                    else:
+                        status = "idle"
+                        summary = "พร้อมใช้งาน"
+                        priority = 10
+                        badge_color = "#71717a"
+        except Exception:
+            pass
+
+        if not title:
+            title = f"เธรด #{cid[:8]}"
+
+        age_text = ""
+        if age < 60:
+            age_text = f"{max(1, int(age))} วิ"
+        elif age < 3600:
+            age_text = f"{int(age // 60)} นาที"
+        else:
+            age_text = f"{int(age // 3600)} ชม."
+
+        return {
+            "id": cid,
+            "title": title,
+            "preview": preview or summary,
+            "summary": summary,
+            "status": status,
+            "priority": priority,
+            "badge_color": badge_color,
+            "updated_at": mtime,
+            "age_seconds": round(age, 1),
+            "age_text": age_text,
+            "path": transcript_path,
+            "is_primary": False
+        }
 
     def _set_state(self, state: str, reason: str = ""):
-        if self.current_state != state:
+        if self.current_state != state or self.state_reason != reason:
             self.current_state = state
+            self.state_reason = reason
             if self.on_state_change:
                 self.on_state_change(state, reason)
 
     def poll(self):
-        latest_file = self.find_latest_transcript()
-        if not latest_file:
+        self._refresh_summary_cache()
+        transcripts = self.get_recent_transcripts(limit=8)
+        if not transcripts:
             return
 
-        if latest_file != self.active_transcript_path:
-            self.active_transcript_path = latest_file
+        threads = []
+        for path in transcripts:
             try:
-                self.last_file_pos = os.path.getsize(latest_file)
-            except OSError:
-                self.last_file_pos = 0
+                t = self.analyze_thread(path)
+                threads.append(t)
+            except Exception:
+                pass
 
-        try:
-            current_size = os.path.getsize(latest_file)
-            mtime = os.path.getmtime(latest_file)
-            time_since_mod = time.time() - mtime
+        # Sort by priority DESC, then updated_at DESC
+        # Needs input (100) > Blocked (80) > Ready (60) > Running (40) > Idle (10)
+        threads.sort(key=lambda item: (item["priority"], item["updated_at"]), reverse=True)
 
-            if current_size > self.last_file_pos:
-                with open(latest_file, "r", encoding="utf-8", errors="ignore") as f:
-                    f.seek(self.last_file_pos)
-                    new_lines = f.readlines()
-                    self.last_file_pos = f.tell()
+        if threads:
+            threads[0]["is_primary"] = True
+            top = threads[0]
+            self.active_transcript_path = top["path"]
 
-                for line in new_lines:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        step = json.loads(line)
-                        step_idx = step.get("step_index", 0)
-                        self.last_step_index = step_idx
-                        source = step.get("source", "")
-                        step_type = step.get("type", "")
-                        status = step.get("status", "")
-                        tool_calls = step.get("tool_calls", [])
-
-                        self.last_activity_time = time.time()
-
-                        if step_type == "USER_INPUT":
-                            self.turn_in_progress = True
-                            self._set_state("thinking", "กำลังคิด...")
-                        elif step_type == "PLANNER_RESPONSE":
-                            if tool_calls:
-                                self.turn_in_progress = True
-                                tool_name = tool_calls[0].get("name", "คำสั่ง")
-                                self._set_state("thinking", f"กำลังคิด ({tool_name})...")
-                            else:
-                                self.turn_in_progress = False
-                                self._set_state("review", "เสร็จแล้ว! ✨")
-                        elif status == "ERROR":
-                            self._set_state("thinking", "กำลังตรวจสอบ...")
-                    except json.JSONDecodeError:
-                        continue
-
-            if self.turn_in_progress:
-                if time_since_mod > 10.0:
-                    self.turn_in_progress = False
-                    self._set_state("review", "เสร็จแล้ว! ✨")
+            # Set Pet state based on top priority thread
+            if top["priority"] >= 40:
+                self.turn_in_progress = (top["status"] == "running")
+                self.last_activity_time = time.time()
+                self._set_state(top["status"], top["summary"])
             else:
-                idle_sec = time.time() - self.last_activity_time
-                if idle_sec > 60.0 and self.current_state not in ("sleep", "wake"):
+                self.turn_in_progress = False
+                idle_sec = time.time() - top["updated_at"]
+                if idle_sec > 90.0 and self.current_state not in ("sleep", "wake"):
                     self._set_state("sleep", "Zzz")
-                elif 5.0 < idle_sec <= 60.0 and self.current_state in ("review", "celebrate", "happy", "curious", "work", "thinking"):
+                elif 5.0 < idle_sec <= 90.0 and self.current_state not in ("idle", "sleep"):
                     self._set_state("idle", "พร้อมใช้งาน")
 
-        except Exception:
-            pass
+        self.recent_threads = threads
 
 
 class PetHttpHandler(BaseHTTPRequestHandler):
@@ -281,14 +405,44 @@ class PetHttpHandler(BaseHTTPRequestHandler):
 
         if path == "/api/activity":
             pw = PetHttpHandler.pet_window_ref
-            root = pw.ag_watcher.brain_root if pw else ""
-            pattern = os.path.join(root, "*", ".system_generated", "logs", "transcript.jsonl")
-            paths = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)[:8]
-            activity = []
-            for file_path in paths:
-                conversation_id = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(file_path))))
-                activity.append({"id": conversation_id, "updated_at": os.path.getmtime(file_path), "status": "running" if pw and file_path == pw.ag_watcher.active_transcript_path and pw.ag_watcher.turn_in_progress else "recent"})
-            self._send_json({"activity": activity})
+            threads = pw.ag_watcher.recent_threads if (pw and hasattr(pw.ag_watcher, "recent_threads")) else []
+            resp = {
+                "threads": threads,
+                "primary_status": pw.ag_watcher.current_state if pw else "idle",
+                "primary_reason": getattr(pw.ag_watcher, "state_reason", "") if pw else "",
+                "has_attention": any(t.get("status") in ("needs_input", "blocked", "ready") for t in threads),
+                "unread_count": sum(1 for t in threads if t.get("status") in ("needs_input", "ready")),
+                # backwards compatible legacy array
+                "activity": [{"id": t["id"], "updated_at": t["updated_at"], "status": t["status"]} for t in threads]
+            }
+            self._send_json(resp)
+            return
+
+        if path == "/api/workspace-context":
+            files = []
+            for root, dirs, fnames in os.walk(SCRIPT_DIR):
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("__pycache__", "build", "dist", "node_modules")]
+                for fn in fnames:
+                    if not fn.startswith(".") and not fn.endswith(".pyc"):
+                        rel = os.path.relpath(os.path.join(root, fn), SCRIPT_DIR).replace("\\", "/")
+                        files.append(rel)
+                if len(files) > 100:
+                    break
+
+            skills = []
+            skills_dir = os.path.join(SCRIPT_DIR, ".agents", "skills")
+            if os.path.isdir(skills_dir):
+                for s in os.listdir(skills_dir):
+                    if os.path.isdir(os.path.join(skills_dir, s)):
+                        skills.append(s)
+            user_profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+            global_skills = os.path.join(user_profile, ".gemini", "config", "skills")
+            if os.path.isdir(global_skills):
+                for s in os.listdir(global_skills):
+                    if os.path.isdir(os.path.join(global_skills, s)) and s not in skills:
+                        skills.append(s)
+
+            self._send_json({"files": sorted(files)[:60], "skills": sorted(skills)})
             return
 
         if path == "/api/download-pet":
@@ -355,6 +509,50 @@ class PetHttpHandler(BaseHTTPRequestHandler):
                 self._send_json({"status": "success", "active_pet_id": pet_id})
             else:
                 self._send_json({"error": "Pet window not attached"}, 500)
+            return
+
+        if self.path == "/api/create-pet-ai":
+            prompt = str(data.get("prompt", "")).strip()
+            name = str(data.get("name", "")).strip()
+            style = str(data.get("style", "pixel_art")).strip()
+            if not prompt:
+                self._send_json({"error": "กรุณากรอกข้อความ Prompt สำหรับสัตว์เลี้ยง"}, 400)
+                return
+            if not name:
+                name = prompt[:14]
+
+            slug = re.sub(r"[^a-zA-Z0-9_]", "", name.lower().replace(" ", "_")) or uuid.uuid4().hex[:6]
+            pet_id = f"custom_ai_{slug}"
+            out_sheet_path = os.path.join(ASSETS_DIR, f"{pet_id}.png")
+
+            try:
+                generate_custom_pet_sheet(out_sheet_path, prompt=prompt, style=style, name=name)
+                val = validate_spritesheet(out_sheet_path)
+                if not val.is_valid:
+                    self._send_json({"error": "สไปรต์ชีตไม่ผ่านการตรวจสอบ", "details": val.errors}, 500)
+                    return
+
+                metadata = load_custom_metadata()
+                metadata[pet_id] = {
+                    "name": name,
+                    "description": f"AI Created: {prompt}",
+                    "style": style,
+                    "created_at": time.time()
+                }
+                save_custom_metadata(metadata)
+
+                if pw:
+                    pw.select_pet_by_id(pet_id)
+
+                self._send_json({
+                    "status": "success",
+                    "pet_id": pet_id,
+                    "name": name,
+                    "preview": f"/assets/{pet_id}.png",
+                    "spritesheet": f"/assets/{pet_id}.png"
+                })
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
             return
 
         if self.path == "/api/open-antigravity":

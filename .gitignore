@@ -18,6 +18,7 @@ out.log
 test_debug.log
 
 # Scratch, backup, and experimental step files
+scratch/
 test_debug.py
 patch_window.py
 server_py_step*.py

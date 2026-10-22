@@ -61,9 +61,12 @@ python main.py
 | **Move** | Left Click + Drag | Drag pet anywhere on your desktop. Position is saved automatically. |
 | **Poke / Greet** | Left Click | Play waving or poke animation. |
 | **Celebrate** | Double Click | Play celebratory spin / review animation. |
-| **Context Menu** | Right Click | Open context menu to access Settings, open Antigravity, or hide. |
-| **Summon Pet** | `Win + Alt + P` | Global hotkey to bring pet to the front / focus. |
-| **Mini Controls** | Hover | Reveals the mini pill (`[✎] Quick Chat` and `[॥] Settings & Activity`). |
+| **Context Menu** | Right Click | Open context menu to access Settings, toggle Mini Mode, open Antigravity, or hide. |
+| **Summon Pet** | `Win + Alt + P` | Global hotkey to bring pet to the front / focus Quick Chat. |
+| **Instant Appshot** | `Win + Alt + S` | Capture active screen instantly and attach `@[assets/appshot_latest.png]` to chat. |
+| **Glass Capsule Bar** | Bottom pill | Unified controls: `[✎]` Quick Chat, `[🎙]` Voice, `[🔔]` Activity Tray, `[॥]` Menu. |
+| **Activity Tray** | `🔔` Bell icon | Real-time card displaying 3-5 background threads with status badges (`Running`, `Needs input`, `Ready`, `Blocked`). |
+| **Context Autocomplete** | `@` / `$` tags | Type `@` for Workspace files or `$` for Skills directly in Quick Chat. |
 
 ---
 

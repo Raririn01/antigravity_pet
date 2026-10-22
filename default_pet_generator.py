@@ -344,6 +344,114 @@ def generate_pet_spritesheet(output_path: str):
     print(f"Generated default pet spritesheet at: {output_path}")
 
 
+def generate_custom_pet_sheet(output_path: str, prompt: str = "", style: str = "pixel_art", name: str = ""):
+    """Generates an AI-themed custom pet spritesheet with prompt-driven palettes and shapes."""
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    sheet = Image.new("RGBA", (SHEET_W, SHEET_H), (0, 0, 0, 0))
+    prompt_lower = (prompt + " " + name + " " + style).lower()
+
+    # Determine theme
+    if any(k in prompt_lower for k in ("pink", "rose", "ชมพู", "bunny", "rabbit", "กระต่าย")):
+        ear_style = "bunny"
+        body_fill = (255, 241, 242, 255)
+        outline_col = (225, 29, 72, 255)
+        eye_col = (244, 114, 182, 255)
+        bulb_col = (251, 113, 133, 255)
+    elif any(k in prompt_lower for k in ("orange", "amber", "ส้ม", "แมว", "cat", "fox", "จิ้งจอก")):
+        ear_style = "cat"
+        body_fill = (255, 247, 237, 255)
+        outline_col = (194, 65, 12, 255)
+        eye_col = (251, 146, 60, 255)
+        bulb_col = (250, 204, 21, 255)
+    elif any(k in prompt_lower for k in ("purple", "violet", "lavender", "ม่วง", "swan")):
+        ear_style = "cat"
+        body_fill = (245, 243, 255, 255)
+        outline_col = (109, 40, 217, 255)
+        eye_col = (168, 85, 247, 255)
+        bulb_col = (192, 132, 252, 255)
+    elif any(k in prompt_lower for k in ("green", "mint", "เขียว", "frog", "dino")):
+        ear_style = "bear"
+        body_fill = (240, 253, 244, 255)
+        outline_col = (21, 128, 61, 255)
+        eye_col = (74, 222, 128, 255)
+        bulb_col = (134, 239, 172, 255)
+    elif any(k in prompt_lower for k in ("gold", "yellow", "ทอง", "เหลือง", "bee")):
+        ear_style = "bear"
+        body_fill = (254, 252, 232, 255)
+        outline_col = (161, 98, 7, 255)
+        eye_col = (234, 179, 8, 255)
+        bulb_col = (250, 204, 21, 255)
+    else:  # Cyber Cyan default
+        ear_style = "cat"
+        body_fill = (240, 249, 255, 255)
+        outline_col = (14, 116, 144, 255)
+        eye_col = (56, 189, 248, 255)
+        bulb_col = (56, 189, 248, 255)
+
+    # --- ROW 0: IDLE (6 frames) ---
+    for col in range(6):
+        hover = math.sin((col / 6.0) * 2 * math.pi) * 3
+        blink = (col == 4)
+        draw_pet(sheet, col=col, row=0, hover_y=hover, eye_style="blink" if blink else "normal")
+
+    # --- ROW 1: RUNNING-RIGHT (8 frames) ---
+    for col in range(8):
+        cycle = col / 8.0
+        tilt = 6 + math.sin(cycle * 2 * math.pi) * 2
+        bounce = -abs(math.sin(cycle * 2 * math.pi)) * 6
+        hl = (-35, 10 + int(math.sin(cycle * 2 * math.pi) * 12))
+        hr = (35, 10 - int(math.sin(cycle * 2 * math.pi) * 12))
+        draw_pet(sheet, col=col, row=1, hover_y=bounce, tilt_body_x=tilt, eye_style="look_side", hand_left=hl, hand_right=hr)
+
+    # --- ROW 2: RUNNING-LEFT (8 frames) ---
+    for col in range(8):
+        cycle = col / 8.0
+        tilt = -6 - math.sin(cycle * 2 * math.pi) * 2
+        bounce = -abs(math.sin(cycle * 2 * math.pi)) * 6
+        hl = (-35, 10 - int(math.sin(cycle * 2 * math.pi) * 12))
+        hr = (35, 10 + int(math.sin(cycle * 2 * math.pi) * 12))
+        draw_pet(sheet, col=col, row=2, hover_y=bounce, tilt_body_x=tilt, eye_style="look_side", hand_left=hl, hand_right=hr)
+
+    # --- ROW 3: WAVING (4 frames) ---
+    for col in range(4):
+        wave_angle = (col / 4.0) * 2 * math.pi
+        wave_y = -18 + math.sin(wave_angle) * 8
+        wave_x = 34 + math.cos(wave_angle) * 6
+        draw_pet(sheet, col=col, row=3, hover_y=0, eye_style="happy", hand_left=(-34, 15), hand_right=(int(wave_x), int(wave_y)))
+
+    # --- ROW 4: JUMPING (5 frames) ---
+    jump_offsets = [0, -12, -24, -14, -2]
+    for col in range(5):
+        h = jump_offsets[col]
+        eye = "wide" if col in (1, 2) else ("happy" if col == 3 else "normal")
+        hl = (-38, 5 if col == 2 else 15)
+        hr = (38, 5 if col == 2 else 15)
+        draw_pet(sheet, col=col, row=4, hover_y=h, eye_style=eye, mouth_style="open" if col == 2 else "smile", hand_left=hl, hand_right=hr)
+
+    # --- ROW 5: FAILED (8 frames) ---
+    for col in range(8):
+        hover = 4 + (col % 2) * 2
+        draw_pet(sheet, col=col, row=5, hover_y=hover, eye_style="sleep", mouth_style="flat", hand_left=(-28, 22), hand_right=(28, 22))
+
+    # --- ROW 6: WAITING / NEEDS INPUT (6 frames) ---
+    for col in range(6):
+        tilt = 4 if col >= 2 else 0
+        draw_pet(sheet, col=col, row=6, hover_y=0, tilt_body_x=tilt, eye_style="wide", mouth_style="small", show_question=(col >= 2))
+
+    # --- ROW 7: THINKING (6 frames) ---
+    for col in range(6):
+        hover = math.sin((col / 6.0) * 2 * math.pi) * 2
+        draw_pet(sheet, col=col, row=7, hover_y=hover, eye_style="normal", mouth_style="smile", show_laptop=True, hand_left=(-18, 20), hand_right=(18, 20))
+
+    # --- ROW 8: REVIEW / DONE (6 frames) ---
+    for col in range(6):
+        hover = -14 + math.sin((col / 6.0) * 2 * math.pi) * 6
+        draw_pet(sheet, col=col, row=8, hover_y=hover, eye_style="happy", mouth_style="open", hand_left=(-30, -18), hand_right=(30, -18), show_confetti=min(3, col + 1), show_antenna_flash=True)
+
+    sheet.save(output_path, "PNG")
+    print(f"Generated custom AI pet spritesheet at: {output_path}")
+
+
 if __name__ == "__main__":
     out = os.path.join(os.path.dirname(__file__), "assets", "default_pet.png")
     generate_pet_spritesheet(out)
