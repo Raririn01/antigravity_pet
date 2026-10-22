@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Logs
+*.log
+err.log
+out.log
+test_debug.log
+
+# Scratch, backup, and experimental step files
+test_debug.py
+patch_window.py
+server_py_step*.py
+settings_backup_*.html
+settings_original_*.html
+ui_step*.html
+*.tmp
+*.bak
+
+# Asset generator work folder
+work/
+
+# Ignore custom uploaded pets by users (keep built-in custom pets)
+assets/custom_*.png
+!assets/custom_agy_chibi_pipeline.png
+!assets/custom_swan.png
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini

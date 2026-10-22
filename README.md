@@ -14,6 +14,7 @@ An interactive, responsive desktop companion & Quick Chat widget for **Google An
 - **Desktop Companion**: Floats smoothly on your screen with transparent background and rich sprite animations.
 - **Multiple Built-in Pets**:
   - 🦊 **Hime (ฮิเมะ)**: White-haired fox girl companion (ChatGPT Work v2 specification with gaze tracking).
+  - 🪷 **Swan (สวอน)**: Lilac-haired lady with lace parasol (Created with `create-pet` skill, S-Tier 100/100).
   - 🤖 **Agy Chibi**: Cyberpunk mascot with glowing cat ears and visor.
   - 🟦 **Codex**: Classic blue terminal robot (`>_`).
   - 🚀 **Agy Bot**: Antigravity cyber coding companion.

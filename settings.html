@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini และสัตว์เลี้ยง - Antigravity Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-base: #09090b;       /* zinc-950 */
+      --bg-card: #121215;       /* matte surface */
+      --bg-surface: #18181b;    /* zinc-900 */
+      --bg-hover: #222227;      /* zinc-800 */
+      --bg-input: #111114;
+      --border-subtle: rgba(255, 255, 255, 0.08); /* white/10 */
+      --border-hover: rgba(255, 255, 255, 0.16);
+      --border-active: #38bdf8;
+      --text-main: #f4f4f5;     /* zinc-100 */
+      --text-muted: #a1a1aa;    /* zinc-400 */
+      --text-dim: #71717a;      /* zinc-500 */
+      --accent-cyan: #38bdf8;
+      --accent-green: #10b981;
+      --accent-danger: #ef4444;
+      --font-stack: "Plus Jakarta Sans", "Prompt", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-stack);
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      font-size: 13.5px;
+      line-height: 1.5;
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
+    }
+
+    /* Container */
+    .app-wrap {
+      max-width: 1080px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 28px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* Header Bar */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      flex-shrink: 0;
+    }
+
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .header-title-row h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      color: #ffffff;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .header-subtitle {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .kbd {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-family: "JetBrains Mono", monospace;
+      color: #e4e4e7;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Raycast / Linear Styled Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.12s ease;
+      user-select: none;
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      border-color: var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-hover);
+      color: #ffffff;
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #09090b;
+      border-color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #e4e4e7;
+      border-color: #e4e4e7;
+    }
+
+    .btn-accent {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+    }
+
+    .btn-accent:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+    }
+
+    /* 2-Column Main Grid Layout */
+    .two-column-layout {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-header svg {
+      color: var(--text-dim);
+    }
+
+    .card-tag {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: "JetBrains Mono", monospace;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Left Stage Column */
+    .stage-card {
+      align-items: center;
+      text-align: center;
+      padding: 24px 18px 20px;
+    }
+
+    .stage-canvas-box {
+      width: 192px;
+      height: 208px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .pedestal-line {
+      position: absolute;
+      bottom: 2px;
+      width: 110px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    #previewCanvas {
+      position: relative;
+      z-index: 2;
+      image-rendering: pixelated;
+    }
+
+    .pet-meta {
+      margin-bottom: 8px;
+    }
+
+    .pet-meta h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 3px;
+    }
+
+    .pet-meta p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      max-width: 240px;
+    }
+
+    .stage-quick-actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .stage-quick-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* Right Column: Controls Column */
+    .controls-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Mood & Action Grid (Icons on top, text on bottom) */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .mood-tile {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+
+    .mood-tile:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      transform: translateY(-1px);
+    }
+
+    .mood-tile.active {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+    }
+
+    .mood-icon {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+    }
+
+    .mood-tile.active .mood-icon {
+      color: var(--accent-cyan);
+    }
+
+    .mood-text {
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: -0.1px;
+    }
+
+    /* Settings List */
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .setting-info h4 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+
+    .setting-info p {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Switch Component */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #27272a;
+      transition: .18s;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #ffffff;
+      transition: .18s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #ffffff;
+      border-color: #ffffff;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(18px);
+      background-color: #09090b;
+    }
+
+    /* Scale Box */
+    .scale-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .scale-box input[type=range] {
+      width: 120px;
+      accent-color: #ffffff;
+    }
+
+    .scale-val {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 7px;
+      border-radius: 5px;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    /* Pet Library Grid */
+    .library-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .pet-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      position: relative;
+    }
+
+    .pet-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    .pet-card.active {
+      border-color: rgba(255, 255, 255, 0.4);
+      background: #18181e;
+    }
+
+    .card-active-pill {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ffffff;
+      color: #09090b;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .pet-card-icon {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .pet-card-icon img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .pet-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 3px;
+    }
+
+    .pet-card-desc {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .pet-card-actions {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .card-icon-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.12s;
+    }
+
+    .card-icon-btn:hover {
+      background: var(--bg-hover);
+      color: #ffffff;
+      border-color: var(--border-hover);
+    }
+
+    .card-icon-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .create-card {
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      background: transparent;
+      justify-content: center;
+      min-height: 150px;
+    }
+
+    .create-card:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .create-icon {
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    /* Collapsible Bottom Sections */
+    .collapsible-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .collapsible-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--bg-card);
+      transition: background 0.12s;
+    }
+
+    .collapsible-head:hover {
+      background: var(--bg-surface);
+    }
+
+    .collapsible-head h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .collapsible-body {
+      padding: 0 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Chat Section */
+    .chat-log {
+      max-height: 220px;
+      min-height: 60px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-bubble {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: #ffffff;
+      color: #09090b;
+      font-weight: 500;
+      max-width: 80%;
+    }
+
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      max-width: 85%;
+    }
+
+    .chat-bubble.system {
+      align-self: center;
+      color: var(--text-dim);
+      font-size: 11.5px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input-row textarea {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #ffffff;
+      font-size: 12.5px;
+      resize: vertical;
+      min-height: 42px;
+      outline: none;
+    }
+
+    .chat-input-row textarea:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .chat-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Activity History List */
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .activity-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .activity-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 10.5px;
+    }
+
+    .activity-tag.running {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-cyan);
+    }
+
+    .activity-tag.done {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+    }
+
+    .activity-time {
+      color: var(--text-dim);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11.5px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #18181b;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 1000;
+    }
+
+    /* Responsive for Narrow Sidecar (Aux Pane) */
+    @media (max-width: 720px) {
+      .app-wrap {
+        padding: 16px 14px 40px;
+        gap: 16px;
+      }
+      .two-column-layout {
+        grid-template-columns: 1fr;
+      }
+      .action-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .pets-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrap">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-icon-box">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="header-title-row">
+            <h1>Mini และสัตว์เลี้ยง</h1>
+            <span class="status-pill" id="statusBadge">
+              <span class="status-dot"></span>
+              <span id="statusBadgeText">เชื่อมต่อแล้ว</span>
+            </span>
+          </div>
+          <p class="header-subtitle">กด <span class="kbd">Alt+Win+P</span> เพื่อแสดงหรือสลับโฟกัสสัตว์เลี้ยงบนเดสก์ท็อป</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="callPet()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          เรียกสัตว์เลี้ยง
+        </button>
+        <button class="btn btn-secondary" id="btnToggleMini" onclick="toggleVisibility()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="btnToggleMiniText">ซ่อนสัตว์เลี้ยง</span>
+        </button>
+        <button class="btn btn-secondary" onclick="openAntigravity()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          เปิด Antigravity
+        </button>
+      </div>
+    </header>
+
+    <!-- 2-Column Desktop App Layout -->
+    <div class="two-column-layout">
+      <!-- Column 1: Compact Character Stage Card -->
+      <div class="stage-column">
+        <div class="card stage-card">
+          <div class="stage-canvas-box">
+            <div class="pedestal-line"></div>
+            <canvas id="previewCanvas" width="192" height="208"></canvas>
+          </div>
+          <div class="pet-meta">
+            <h2 id="activePetTitle">Hime</h2>
+            <p id="activePetDesc">จิ้งจอกสาวจิ๋วผมขาว ตาแดง ชุดแดงขาว คู่หูช่างสงสัย</p>
+          </div>
+          <div class="stage-quick-actions">
+            <button class="btn btn-accent" onclick="callPet()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              ดึงมาข้างหน้า
+            </button>
+            <button class="btn btn-secondary" onclick="triggerMood('celebrate')">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              ทดสอบดีใจ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Mood Action Grid & Settings Panel -->
+      <div class="controls-column">
+        <!-- Mood / Action Grid with Lucide Icons -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              ทดสอบท่าทาง
+            </h3>
+            <span class="card-tag" id="currentMoodBadge">พักผ่อน</span>
+          </div>
+
+          <div class="action-grid">
+            <!-- Idle -->
+            <button class="mood-tile active" id="mood-idle" onclick="triggerMood('idle')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              <span class="mood-text">พักผ่อน</span>
+            </button>
+
+            <!-- Walk -->
+            <button class="mood-tile" id="mood-walk" onclick="triggerMood('walk')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.5-2 8.5V16c0 .55-.45 1-1 1s-1-.45-1-1Zm10 4v-2.38c0-2.12-1.03-3.12-1-5.62.03-2.72 1.49-6 4.5-6 1.87 0 2.5 1.8 2.5 3.5 0 3.11-2 5.5-2 8.5V20c0 .55-.45 1-1 1s-1-.45-1-1Z"/></svg>
+              <span class="mood-text">เดินเล่น</span>
+            </button>
+
+            <!-- Wave -->
+            <button class="mood-tile" id="mood-wave" onclick="triggerMood('wave')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+              <span class="mood-text">ทักทาย</span>
+            </button>
+
+            <!-- Jump -->
+            <button class="mood-tile" id="mood-play" onclick="triggerMood('play')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              <span class="mood-text">กระโดด</span>
+            </button>
+
+            <!-- Curious -->
+            <button class="mood-tile" id="mood-curious" onclick="triggerMood('curious')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+              <span class="mood-text">สงสัย</span>
+            </button>
+
+            <!-- Work -->
+            <button class="mood-tile" id="mood-work" onclick="triggerMood('work')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span class="mood-text">พิมพ์งาน</span>
+            </button>
+
+            <!-- Celebrate -->
+            <button class="mood-tile" id="mood-celebrate" onclick="triggerMood('celebrate')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              <span class="mood-text">ฉลองสำเร็จ</span>
+            </button>
+
+            <!-- Reset to Idle -->
+            <button class="mood-tile" onclick="triggerMood('idle')">
+              <svg class="mood-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span class="mood-text">รีเซ็ต</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- System Settings Panel -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              ตั้งค่าระบบ
+            </h3>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>ซิงก์สถานะกับ Antigravity</h4>
+                <p>ขยับท่าทางตามสถานะการเขียนโค้ดและพิมพ์งานของ AI</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="syncToggle" onchange="updateSettings('live_sync', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>กล่องข้อความสถานะ</h4>
+                <p>แสดงป้ายข้อความบอกงานที่ AI กำลังทำเหนือหัวสัตว์เลี้ยง</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="bubbleToggle" onchange="updateSettings('show_bubble', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>เดินเล่นอัตโนมัติ</h4>
+                <p>เดินสำรวจหน้าจอคอมพิวเตอร์เมื่อไม่ได้สั่งงาน</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="roamToggle" onchange="updateSettings('auto_roam', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>ขนาดสัตว์เลี้ยง</h4>
+                <p>ปรับขนาดตัวละครบนหน้าจอเดสก์ท็อป</p>
+              </div>
+              <div class="scale-box">
+                <input type="range" id="scaleSlider" min="0.5" max="1.25" step="0.05" value="0.75" oninput="onScaleSlide(this.value)" onchange="onScaleChange(this.value)">
+                <span class="scale-val" id="scaleBadge">75%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pet Library Grid -->
+    <section class="library-section">
+      <div class="card-header" style="padding: 0 4px;">
+        <h3>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          สัตว์เลี้ยงของฉัน
+        </h3>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" onclick="loadData(true)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            รีเฟรช
+          </button>
+          <button class="btn btn-primary" onclick="triggerUpload()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            เพิ่ม Pet
+          </button>
+          <input type="file" id="fileUploadInput" accept="image/png,image/webp" style="display:none;" onchange="handleFileUpload(this.files[0])">
+        </div>
+      </div>
+
+      <div class="pets-grid" id="petsGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Collapsible Quick Chat Section -->
+    <div class="collapsible-card">
+      <div class="collapsible-head" onclick="toggleCollapsible('chatBody')">
+        <h3>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          สนทนาด่วน
+        </h3>
+        <button class="card-icon-btn" onclick="event.stopPropagation(); clearChat();">เริ่มแชทใหม่</button>
+      </div>
+
+      <div class="collapsible-body" id="chatBody">
+        <div class="chat-log" id="chatLog">
+          <div class="chat-bubble system">พร้อมส่งคำสั่งไปยัง Antigravity CLI ค่ะ</div>
+        </div>
+
+        <div class="chat-input-row">
+          <textarea id="chatInput" placeholder="พิมพ์ข้อความสั่งงาน Antigravity... (กด Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)"></textarea>
+        </div>
+
+        <div class="chat-footer">
+          <span id="chatStatusText">พร้อมส่งคำสั่ง</span>
+          <button class="btn btn-secondary" id="btnSendChat" onclick="sendChat()">ส่งข้อความ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible Activity History Section -->
+    <div class="collapsible-card">
+      <div class="collapsible-head" onclick="toggleCollapsible('activityBody')">
+        <h3>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          กิจกรรมล่าสุด
+        </h3>
+        <button class="card-icon-btn" onclick="event.stopPropagation(); loadActivity();">อัปเดต</button>
+      </div>
+
+      <div class="collapsible-body" id="activityBody">
+        <div class="activity-list" id="activityList">
+          <div style="color: var(--text-dim); font-size: 12px; padding: 6px;">กำลังโหลดประวัติ...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = (window.location.origin && window.location.origin.startsWith('http')) 
+      ? window.location.origin 
+      : 'http://127.0.0.1:21420';
+
+    let currentConfig = null;
+    let availablePets = [];
+    let activePetId = 'hime';
+    let loadedSpriteUrl = '';
+    let activeSpriteSheetImage = new Image();
+    let currentActionRow = 0;
+    let currentFrame = 0;
+    let animTimer = null;
+    let lastRenderedConfigJson = '';
+
+    // Standard ChatGPT Pet Sprite Sheet Row Specifications
+    const MOOD_MAP = {
+      'idle':      { row: 0, frames: 6, label: 'พักผ่อน' },
+      'walk':      { row: 1, frames: 8, label: 'เดินเล่น' },
+      'wave':      { row: 3, frames: 4, label: 'ทักทาย' },
+      'play':      { row: 4, frames: 5, label: 'กระโดด' },
+      'curious':   { row: 6, frames: 6, label: 'สงสัย' },
+      'work':      { row: 7, frames: 6, label: 'พิมพ์งาน' },
+      'celebrate': { row: 8, frames: 6, label: 'ฉลองสำเร็จ' }
+    };
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2800);
+    }
+
+        async function api(path, data = null, method = null) {
+      const opts = {};
+      if (data !== null) {
+        opts.method = method || 'POST';
+        opts.headers = { 'Content-Type': 'application/json' };
+        opts.body = JSON.stringify(data);
+      } else {
+        opts.method = method || 'GET';
+      }
+
+      let lastErr = null;
+
+      // 1. Try relative URL first (Same-Origin via sidecar proxy - 0 CORS friction)
+      try {
+        const res1 = await fetch(path, opts);
+        if (res1.ok) return await res1.json();
+        const errText1 = await res1.text();
+        lastErr = new Error(`HTTP ${res1.status}: ${errText1}`);
+      } catch (err1) {
+        lastErr = err1;
+      }
+
+      // 2. Try direct daemon port 21420
+      try {
+        const res2 = await fetch(`http://127.0.0.1:21420${path}`, opts);
+        if (res2.ok) return await res2.json();
+        const errText2 = await res2.text();
+        lastErr = new Error(`HTTP ${res2.status}: ${errText2}`);
+      } catch (err2) {
+        lastErr = err2;
+      }
+
+      // 3. Try API_BASE if different
+      if (typeof API_BASE === 'string' && API_BASE && !API_BASE.includes('21420')) {
+        try {
+          const res3 = await fetch(`${API_BASE}${path}`, opts);
+          if (res3.ok) return await res3.json();
+          const errText3 = await res3.text();
+          lastErr = new Error(`HTTP ${res3.status}: ${errText3}`);
+        } catch (err3) {
+          lastErr = err3;
+        }
+      }
+
+      throw lastErr || new Error(`Failed to call ${path}`);
+    }
+
+    // --- Data Loading & Rendering ---
+
+    async function loadData(force = false) {
+      try {
+        const data = await api('/api/pets');
+        if (!data || !data.pets) return;
+
+        const dataJson = JSON.stringify({
+          active_pet_id: data.active_pet_id,
+          visible: data.visible,
+          scale: data.scale,
+          live_sync: data.live_sync,
+          show_bubble: data.show_bubble,
+          auto_roam: data.auto_roam,
+          status: data.status,
+          pets_count: data.pets.length
+        });
+
+        currentConfig = data;
+        availablePets = data.pets;
+        activePetId = data.active_pet_id || activePetId;
+
+        // Status badge
+        const badge = document.getElementById('statusBadge');
+        const badgeText = document.getElementById('statusBadgeText');
+        if (data.status === 'running') {
+          badge.style.background = 'rgba(56, 189, 248, 0.12)';
+          badge.style.color = 'var(--accent-cyan)';
+          badge.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+          badgeText.innerText = 'AI กำลังพิมพ์งาน';
+        } else {
+          badge.style.background = 'rgba(16, 185, 129, 0.1)';
+          badge.style.color = 'var(--accent-green)';
+          badge.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+          badgeText.innerText = 'เชื่อมต่อแล้ว';
+        }
+
+        // Only update controls and gallery if state actually changed
+        if (force || dataJson !== lastRenderedConfigJson) {
+          lastRenderedConfigJson = dataJson;
+
+          document.getElementById('btnToggleMiniText').innerText = data.visible ? 'ซ่อนสัตว์เลี้ยง' : 'แสดงสัตว์เลี้ยง';
+          document.getElementById('syncToggle').checked = !!data.live_sync;
+          document.getElementById('bubbleToggle').checked = !!data.show_bubble;
+          document.getElementById('roamToggle').checked = !!data.auto_roam;
+          document.getElementById('scaleSlider').value = data.scale || 0.75;
+          document.getElementById('scaleBadge').innerText = `${Math.round((data.scale || 0.75) * 100)}%`;
+
+          renderGallery(data.pets, activePetId);
+          loadActivePreview(activePetId);
+        }
+      } catch (err) {
+        document.getElementById('statusBadgeText').innerText = 'กำลังรอเชื่อมต่อ...';
+      }
+    }
+
+    function renderGallery(pets, currentId) {
+      const grid = document.getElementById('petsGrid');
+      grid.innerHTML = '';
+
+      pets.forEach(pet => {
+        const card = document.createElement('div');
+        const isActive = (pet.id === currentId);
+        card.className = `pet-card ${isActive ? 'active' : ''}`;
+        card.onclick = (e) => {
+          if (!e.target.closest('.card-icon-btn')) {
+            selectPet(pet.id);
+          }
+        };
+
+        let iconHtml = '';
+        if (pet.id === 'none') {
+          iconHtml = `<span style="font-size:32px; opacity:0.5;">📦</span>`;
+        } else if (pet.id === 'custom_swan' || pet.id === 'swan') {
+          iconHtml = `<img src="${API_BASE}/assets/swan_preview.png" onerror="if(this.src!=='http://127.0.0.1:21420/assets/swan_preview.png')this.src='http://127.0.0.1:21420/assets/swan_preview.png'" alt="${pet.name}">`;
+        } else if (pet.preview) {
+          let pRel = pet.preview.startsWith('/') ? pet.preview : '/' + pet.preview;
+          iconHtml = `<img src="${API_BASE}${pRel}" onerror="if(this.src!=='http://127.0.0.1:21420${pRel}')this.src='http://127.0.0.1:21420${pRel}'" alt="${pet.name}">`;
+        } else {
+          iconHtml = `<span style="font-size:32px;">🐾</span>`;
+        }
+
+        let footerActions = '';
+        if (pet.is_custom) {
+          footerActions = `
+            <div class="pet-card-actions">
+              <button class="card-icon-btn" onclick="downloadPet('${pet.id}')">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                ดาวน์โหลด
+              </button>
+              <button class="card-icon-btn danger" onclick="deletePet('${pet.id}', '${pet.name}')">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                ลบ
+              </button>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          ${isActive ? '<span class="card-active-pill">ใช้งานอยู่</span>' : ''}
+          <div class="pet-card-icon">${iconHtml}</div>
+          <div class="pet-card-title">${pet.name}</div>
+          <div class="pet-card-desc">${pet.description || ''}</div>
+          ${footerActions}
+        `;
+        grid.appendChild(card);
+      });
+
+      // + เพิ่ม Pet Card
+      const createCard = document.createElement('div');
+      createCard.className = 'pet-card create-card';
+      createCard.onclick = triggerUpload;
+      createCard.innerHTML = `
+        <div class="create-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </div>
+        <div class="pet-card-title">เพิ่ม Pet ใหม่</div>
+        <div class="pet-card-desc">อัปโหลด Sprite Sheet (v1 หรือ v2)</div>
+      `;
+      grid.appendChild(createCard);
+    }
+
+        function loadActivePreview(petId) {
+      const pet = availablePets.find(p => p.id === petId);
+      if (!pet) return;
+
+      document.getElementById('activePetTitle').innerText = pet.name;
+      document.getElementById('activePetDesc').innerText = pet.description || '';
+
+      if (!pet.spritesheet) {
+        loadedSpriteUrl = '';
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      let sRel = pet.spritesheet.startsWith('/') ? pet.spritesheet : '/' + pet.spritesheet;
+      const primaryUrl = `${API_BASE}${sRel}`;
+      const fallbackUrl = `http://127.0.0.1:21420${sRel}`;
+
+      if (loadedSpriteUrl === primaryUrl && activeSpriteSheetImage && activeSpriteSheetImage.complete && activeSpriteSheetImage.naturalWidth) {
+        return;
+      }
+
+      loadedSpriteUrl = primaryUrl;
+      const img = new Image();
+      img.onload = () => {
+        activeSpriteSheetImage = img;
+        startAnimationLoop();
+      };
+      img.onerror = () => {
+        console.warn('Primary sprite load failed for', primaryUrl, 'falling back to', fallbackUrl);
+        if (primaryUrl !== fallbackUrl) {
+          const fb = new Image();
+          fb.onload = () => {
+            activeSpriteSheetImage = fb;
+            startAnimationLoop();
+          };
+          fb.src = fallbackUrl;
+        }
+      };
+      img.src = primaryUrl;
+    }
+
+    function startAnimationLoop() {
+      if (animTimer) return;
+      currentFrame = 0;
+      const canvas = document.getElementById('previewCanvas');
+      const ctx = canvas.getContext('2d');
+
+      animTimer = setInterval(() => {
+        if (!activeSpriteSheetImage || !activeSpriteSheetImage.complete || !activeSpriteSheetImage.naturalWidth) return;
+
+        let maxFrames = 6;
+        for (const k in MOOD_MAP) {
+          if (MOOD_MAP[k].row === currentActionRow) {
+            maxFrames = MOOD_MAP[k].frames;
+            break;
+          }
+        }
+
+        currentFrame = (currentFrame + 1) % maxFrames;
+        const cellW = 192;
+        const cellH = 208;
+        const sx = currentFrame * cellW;
+        const sy = currentActionRow * cellH;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(activeSpriteSheetImage, sx, sy, cellW, cellH, 0, 0, cellW, cellH);
+      }, 125);
+    }
+
+    // --- Action & Mood Switching ---
+
+    async function triggerMood(moodKey) {
+      const info = MOOD_MAP[moodKey] || MOOD_MAP['idle'];
+      currentActionRow = info.row;
+      currentFrame = 0;
+
+      document.getElementById('currentMoodBadge').innerText = info.label;
+
+      document.querySelectorAll('.action-grid .mood-tile').forEach(btn => {
+        btn.classList.toggle('active', btn.id === `mood-${moodKey}`);
+      });
+
+      showToast(`ทดสอบท่า ${info.label} บนหน้าจอแล้ว ✨`);
+      try {
+        await api('/state', { state: moodKey, message: `ทดสอบท่า ${info.label}` });
+      } catch (e) {
+        showToast(`ส่งคำสั่งไม่สำเร็จ: ${e}`);
+      }
+    }
+
+    // --- Core Pet Control Calls ---
+
+    async function callPet() {
+      try {
+        showToast('กำลังเรียกสัตว์เลี้ยงมาหน้าจอ...');
+        const res = await api('/api/call-pet', {});
+        showToast('เรียกสัตว์เลี้ยงมาข้างหน้าแล้ว ✨');
+        loadData(true);
+      } catch (e) {
+        showToast('ไม่สามารถเรียกสัตว์เลี้ยงได้: ' + e);
+      }
+    }
+
+    async function selectPet(petId) {
+      activePetId = petId;
+      try {
+        await api('/api/select-pet', { pet_id: petId });
+        showToast(`สลับเป็น ${petId} เรียบร้อยแล้ว`);
+        loadData(true);
+      } catch (e) {
+        showToast('สลับไม่สำเร็จ: ' + e);
+      }
+    }
+
+    async function toggleVisibility() {
+      const newVisible = !currentConfig?.visible;
+      showToast(newVisible ? 'กำลังแสดงสัตว์เลี้ยงบนหน้าจอ...' : 'กำลังซ่อนสัตว์เลี้ยง...');
+      try {
+        await api('/api/settings', { visible: newVisible });
+        loadData(true);
+      } catch (e) {
+        showToast('ตั้งค่าไม่สำเร็จ: ' + e);
+      }
+    }
+
+    async function updateSettings(key, val) {
+      if (currentConfig) {
+        currentConfig[key] = val;
+      }
+      const payload = {};
+      payload[key] = val;
+      try {
+        await api('/api/settings', payload);
+        loadData(true);
+      } catch (e) {
+        console.error('Update settings failed:', e);
+      }
+    }
+
+    function onScaleSlide(val) {
+      document.getElementById('scaleBadge').innerText = `${Math.round(val * 100)}%`;
+    }
+
+    async function onScaleChange(val) {
+      const numVal = parseFloat(val);
+      if (currentConfig) {
+        currentConfig.scale = numVal;
+      }
+      try {
+        await api('/api/settings', { scale: numVal });
+        loadData(true);
+      } catch (e) {
+        console.error('Scale change failed:', e);
+      }
+    }
+
+    async function openAntigravity() {
+      try {
+        await api('/api/open-antigravity', {});
+        showToast('กำลังเปิด Antigravity...');
+      } catch (e) {
+        showToast('ไม่สามารถเปิด Antigravity');
+      }
+    }
+
+    function triggerUpload() {
+      document.getElementById('fileUploadInput').click();
+    }
+
+    async function handleFileUpload(file) {
+      if (!file) return;
+      showToast('กำลังอัปโหลด Sprite Sheet...');
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const res = await api('/api/upload-pet', {
+            filename: file.name,
+            content: e.target.result
+          });
+          if (res.status === 'success') {
+            showToast('สร้าง Pet สำเร็จแล้ว! 🎉');
+            loadData(true);
+          } else {
+            alert('Upload failed: ' + (res.details ? res.details.join('\n') : res.error));
+          }
+        } catch (err) {
+          alert('Upload failed: ' + err);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function downloadPet(petId) {
+      window.open(`${API_BASE}/api/download-pet?id=${petId}`, '_blank');
+    }
+
+    async function deletePet(petId, petName) {
+      if (!confirm(`คุณต้องการลบ "${petName}" หรือไม่?`)) return;
+      try {
+        await api('/api/delete-pet', { pet_id: petId });
+        showToast('ลบ Pet เรียบร้อย');
+        loadData(true);
+      } catch (e) {
+        alert('Delete failed: ' + e);
+      }
+    }
+
+    function toggleCollapsible(id) {
+      const b = document.getElementById(id);
+      b.style.display = (b.style.display === 'none' ? 'flex' : 'none');
+    }
+
+    // --- Quick Chat Implementation ---
+
+    let currentChatId = localStorage.getItem('antigravityPetChatId') || '';
+
+    function appendChatLine(sender, text, type = 'user') {
+      const log = document.getElementById('chatLog');
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${type}`;
+      bubble.innerText = `${type === 'user' ? 'คุณ: ' : type === 'assistant' ? 'Antigravity: ' : ''}${text}`;
+      log.appendChild(bubble);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearChat() {
+      currentChatId = '';
+      localStorage.removeItem('antigravityPetChatId');
+      document.getElementById('chatLog').innerHTML = `
+        <div class="chat-bubble system">เริ่มบทสนทนาใหม่ พร้อมรับคำสั่งค่ะ</div>
+      `;
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      const btn = document.getElementById('btnSendChat');
+      const statusText = document.getElementById('chatStatusText');
+      input.value = '';
+      btn.disabled = true;
+      statusText.innerText = 'กำลังส่งคำสั่ง...';
+      appendChatLine('คุณ', prompt, 'user');
+
+      try {
+        const started = await api('/api/chat', { prompt, conversation_id: currentChatId });
+        statusText.innerText = 'Antigravity กำลังคิด...';
+        
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const job = await api(`/api/chat?job=${encodeURIComponent(started.job)}`);
+          if (job.status === 'done') {
+            currentChatId = job.conversation_id || currentChatId;
+            localStorage.setItem('antigravityPetChatId', currentChatId);
+            appendChatLine('Antigravity', job.response || 'ทำงานเสร็จเรียบร้อยแล้วค่ะ!', 'assistant');
+            statusText.innerText = 'พร้อมส่งคำสั่ง';
+            return;
+          }
+          if (job.status === 'error') {
+            throw new Error(job.error || 'การสนทนาขัดข้อง');
+          }
+        }
+        throw new Error('หมดเวลาการรอผลลัพธ์');
+      } catch (err) {
+        appendChatLine('ระบบ', err.message, 'system');
+        statusText.innerText = 'เกิดข้อผิดพลาด';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+
+    // --- Activity History Implementation ---
+
+    async function loadActivity() {
+      const list = document.getElementById('activityList');
+      try {
+        const data = await api('/api/activity');
+        if (!data || !data.activity || !data.activity.length) {
+          list.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; padding: 6px;">ยังไม่มีกิจกรรมล่าสุด</div>';
+          return;
+        }
+
+        list.innerHTML = data.activity.map(a => `
+          <div class="activity-row">
+            <div>
+              <span class="activity-tag ${a.status === 'running' ? 'running' : 'done'}">
+                ${a.status === 'running' ? 'กำลังทำงาน' : 'เสร็จสิ้น'}
+              </span>
+              <strong style="margin-left: 8px; color: var(--text-main);">#${a.id.slice(0, 8)}</strong>
+            </div>
+            <time class="activity-time">${new Date(a.updated_at * 1000).toLocaleTimeString('th-TH')}</time>
+          </div>
+        `).join('');
+      } catch (e) {
+        list.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; padding: 6px;">ไม่สามารถดึงข้อมูลกิจกรรมได้</div>';
+      }
+    }
+
+    // --- Initial Startup & Polling ---
+    loadData(true);
+    loadActivity();
+
+    setInterval(() => loadData(false), 3000);
+    setInterval(loadActivity, 15000);
+  </script>
+</body>
+</html>

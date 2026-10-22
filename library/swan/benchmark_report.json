@@ -1,0 +1,17 @@
+{
+  "score": 100,
+  "tier": "S-Tier (Hime Gold Standard)",
+  "spec_version": "v2",
+  "baseline_spread_px": 0,
+  "min_feet_y": 203,
+  "max_feet_y": 203,
+  "avg_x_center": 96.43,
+  "center_offset_px": 0.43,
+  "white_halo_ratio": 0.0,
+  "breakdown": {
+    "baseline_stability": "40/40",
+    "horizontal_balance": "30/30",
+    "gaze_completeness": "20/20",
+    "alpha_cleanliness": "10/10"
+  }
+}
