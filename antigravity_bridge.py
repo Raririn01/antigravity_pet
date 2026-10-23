@@ -162,20 +162,30 @@ class AntigravityWatcher:
                     pass
 
     def get_recent_transcripts(self, limit: int = 10) -> List[str]:
-        all_matches = []
+        by_cid = {}
         for root in self.brain_roots:
             if os.path.isdir(root):
                 pattern = os.path.join(root, "*", ".system_generated", "logs", "transcript.jsonl")
-                all_matches.extend(glob.glob(pattern))
-        if not all_matches:
+                for p in glob.glob(pattern):
+                    cid = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(p))))
+                    mtime = os.path.getmtime(p)
+                    if cid not in by_cid or mtime > by_cid[cid][0]:
+                        by_cid[cid] = (mtime, p)
+        if not by_cid:
             return []
-        all_matches.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-        return all_matches[:limit]
+        sorted_items = sorted(by_cid.values(), key=lambda x: x[0], reverse=True)
+        return [p for _, p in sorted_items[:limit]]
 
     def _clean_title(self, raw_text: str) -> str:
         if not raw_text:
             return ""
-        text = re.sub(r"<[^>]+>", "", raw_text)
+        text = str(raw_text)
+        if "<USER_REQUEST>" in text:
+            try:
+                text = text.split("<USER_REQUEST>")[1].split("</USER_REQUEST>")[0].strip()
+            except Exception:
+                pass
+        text = re.sub(r"<[^>]+>", "", text)
         text = re.sub(r"@\[[^\]]+\]", "", text)
         text = text.replace("\r", " ").replace("\n", " ").strip()
         text = re.sub(r"\s+", " ", text)
@@ -207,8 +217,10 @@ class AntigravityWatcher:
                         try:
                             d = json.loads(l)
                             if d.get("type") == "USER_INPUT":
-                                title = self._clean_title(d.get("content", ""))
-                                break
+                                tit_candidate = self._clean_title(d.get("content", ""))
+                                if tit_candidate:
+                                    title = tit_candidate
+                                    break
                         except Exception:
                             pass
 

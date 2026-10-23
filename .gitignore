@@ -35,6 +35,7 @@ work/
 assets/custom_*.png
 !assets/custom_agy_chibi_pipeline.png
 !assets/custom_swan.png
+assets/appshot_*.png
 
 # IDE / Editor
 .vscode/

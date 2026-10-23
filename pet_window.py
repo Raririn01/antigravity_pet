@@ -5,7 +5,7 @@ Fully integrated with Antigravity 2.0:
 2. Single click toggles Quick Chat bar with anchor position preserved.
 3. Can hide/collapse Quick Chat bar even while working/thinking.
 4. Double-click launches & focuses Antigravity 2.0.
-5. Persistent conversation session synced directly to Antigravity 2.0.
+5. Persistent Quick Chat session through Antigravity CLI.
 6. Dragging pet plays running animation (running-right / running-left).
 7. Rich '+' button menu with Plugins/Skills and real Antigravity 2.0 conversation history.
 """
@@ -16,6 +16,8 @@ import glob
 import math
 import time
 import json
+import re
+import sqlite3
 import shutil
 import ctypes
 from ctypes import wintypes
@@ -44,6 +46,32 @@ def pil_to_qpixmap(pil_img: Image.Image) -> QPixmap:
     qimg = QImage(data, rgba.width, rgba.height, QImage.Format.Format_RGBA8888)
     return QPixmap.fromImage(qimg)
 
+
+
+def ensure_conversation_in_cli(conversation_id: str):
+    """Ensure conversation DB and transcript are available to agy CLI."""
+    if not conversation_id:
+        return
+    user_profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+    cli_base = os.path.join(user_profile, ".gemini", "antigravity-cli")
+    sources = [
+        os.path.join(user_profile, ".gemini", "antigravity"),
+        os.path.join(user_profile, ".gemini", "antigravity-ide")
+    ]
+    for src_base in sources:
+        src_db = os.path.join(src_base, "conversations", f"{conversation_id}.db")
+        dst_db_dir = os.path.join(cli_base, "conversations")
+        if os.path.isfile(src_db):
+            os.makedirs(dst_db_dir, exist_ok=True)
+            shutil.copy2(src_db, os.path.join(dst_db_dir, f"{conversation_id}.db"))
+
+        src_brain = os.path.join(src_base, "brain", conversation_id)
+        dst_brain = os.path.join(cli_base, "brain", conversation_id)
+        if os.path.isdir(src_brain) and not os.path.isdir(dst_brain):
+            try:
+                shutil.copytree(src_brain, dst_brain, dirs_exist_ok=True)
+            except Exception:
+                pass
 
 def sync_conversation_to_antigravity(conversation_id: str):
     """Syncs conversation DB and transcript files from CLI to Antigravity 2.0 and IDE."""
@@ -80,26 +108,91 @@ def sync_conversation_to_antigravity(conversation_id: str):
             pass
 
 
-def get_recent_antigravity_conversations(limit: int = 8):
-    """Retrieves real recent conversation titles from Antigravity 2.0."""
+
+# --- Minimalist SVG Icons for Context Menu ---
+SETTINGS_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f4f4f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+  <circle cx="12" cy="12" r="3"/>
+</svg>"""
+
+HIDE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f4f4f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+  <line x1="2" y1="2" x2="22" y2="22"/>
+</svg>"""
+
+def svg_to_icon(svg_str, size=18):
+    try:
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+        renderer = QSvgRenderer(QByteArray(svg_str.encode("utf-8")))
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        renderer.render(painter)
+        painter.end()
+        return QIcon(pixmap)
+    except Exception:
+        return QIcon()
+
+def get_recent_antigravity_conversations(limit: int = 10):
+    """Retrieve conversations across Desktop App, IDE, and CLI."""
     user_profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
     roots = [
         os.path.join(user_profile, ".gemini", "antigravity", "brain"),
         os.path.join(user_profile, ".gemini", "antigravity-ide", "brain"),
         os.path.join(user_profile, ".gemini", "antigravity-cli", "brain")
     ]
-    seen = set()
-    convos = []
+    
+    # 1. Load titles from SQLite summary DBs
+    summaries = {}
+    for db_path in [
+        os.path.join(user_profile, ".gemini", "antigravity", "conversation_summaries.db"),
+        os.path.join(user_profile, ".gemini", "antigravity-cli", "conversation_summaries.db")
+    ]:
+        if os.path.isfile(db_path):
+            try:
+                conn = sqlite3.connect(db_path, timeout=0.8)
+                cur = conn.cursor()
+                for cid, tit, prev in cur.execute("SELECT conversation_id, title, preview FROM conversation_summaries"):
+                    if cid and tit and cid not in summaries:
+                        summaries[cid] = tit.strip()
+                conn.close()
+            except Exception:
+                pass
+
+    # 2. Check active presence locks
+    presence_locks = {}
+    for sub in ["antigravity", "antigravity-ide"]:
+        pdir = os.path.join(user_profile, ".gemini", sub, "presence")
+        if os.path.isdir(pdir):
+            for f in os.listdir(pdir):
+                if f.endswith(".lock"):
+                    cid = f[:-5]
+                    mtime = os.path.getmtime(os.path.join(pdir, f))
+                    presence_locks[cid] = max(presence_locks.get(cid, 0), mtime)
+
+    # 3. Scan transcripts deduplicated by cid
+    by_cid = {}
     for r in roots:
         if not os.path.isdir(r):
             continue
-        for p in glob.glob(os.path.join(r, "*", ".system_generated", "logs", "transcript.jsonl")):
+        pattern = os.path.join(r, "*", ".system_generated", "logs", "transcript.jsonl")
+        for p in glob.glob(pattern):
             cid = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(p))))
-            if cid in seen:
-                continue
-            seen.add(cid)
             mtime = os.path.getmtime(p)
-            title = ""
+            if cid not in by_cid or mtime > by_cid[cid]["mtime"]:
+                by_cid[cid] = {"path": p, "mtime": mtime}
+
+    convos = []
+    now = time.time()
+    for cid, info in by_cid.items():
+        title = summaries.get(cid, "")
+        p = info["path"]
+        mtime = info["mtime"]
+
+        if not title:
             try:
                 with open(p, "r", encoding="utf-8", errors="ignore") as f:
                     for line in f:
@@ -107,16 +200,105 @@ def get_recent_antigravity_conversations(limit: int = 8):
                             step = json.loads(line)
                             c = str(step.get("content") or "")
                             if "<USER_REQUEST>" in c:
-                                c = c.split("<USER_REQUEST>")[1].split("</USER_REQUEST>")[0].strip()
-                            title = c.replace("\n", " ")[:36].strip()
-                            break
+                                try:
+                                    c = c.split("<USER_REQUEST>")[1].split("</USER_REQUEST>")[0].strip()
+                                except Exception:
+                                    pass
+                            c = re.sub(r"<[^>]+>", "", c)
+                            c = re.sub(r"@\[[^\]]+\]", "", c)
+                            title = c.replace("\r", " ").replace("\n", " ").strip()
+                            if len(title) > 36:
+                                title = title[:34] + "..."
+                            if title:
+                                break
             except Exception:
                 pass
-            if not title:
-                title = f"บทสนทนา #{cid[:8]}"
-            convos.append({"id": cid, "title": title, "mtime": mtime})
-    convos.sort(key=lambda x: x["mtime"], reverse=True)
+
+        if not title:
+            title = f"บทสนทนา #{cid[:8]}"
+
+        is_present = (now - presence_locks.get(cid, 0) < 1800)
+        convos.append({
+            "id": cid,
+            "title": title,
+            "mtime": mtime,
+            "is_present": is_present,
+            "path": p
+        })
+
+    convos.sort(key=lambda x: (x["is_present"], x["mtime"]), reverse=True)
     return convos[:limit]
+
+
+def get_workspace_files(base_dir: str, limit: int = 10):
+    """List real, small source documents that can be referenced in a prompt."""
+    candidates = []
+    for folder in (base_dir, os.path.join(base_dir, "scripts")):
+        if not os.path.isdir(folder):
+            continue
+        for entry in os.scandir(folder):
+            if entry.is_file() and entry.name.lower().endswith((".py", ".md", ".html", ".json")):
+                rel_path = os.path.relpath(entry.path, base_dir).replace(os.sep, "/")
+                candidates.append((entry.stat().st_mtime, rel_path))
+    return [path for _, path in sorted(candidates, reverse=True)[:limit]]
+
+
+def get_installed_skills(base_dir: str):
+    user_profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+    roots = (
+        os.path.join(base_dir, ".agents", "skills"),
+        os.path.join(user_profile, ".gemini", "config", "skills"),
+    )
+    skills = set()
+    for root in roots:
+        if os.path.isdir(root):
+            skills.update(entry.name for entry in os.scandir(root) if entry.is_dir() and os.path.isfile(os.path.join(entry.path, "SKILL.md")))
+    return sorted(skills, key=str.casefold)
+
+
+class IconButton(QPushButton):
+    """Small vector controls stay legible with Thai or emoji font fallback."""
+
+    def __init__(self, icon_kind: str, parent=None):
+        super().__init__("", parent)
+        self.icon_kind = icon_kind
+        self.attention_color = None
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        color = QColor("#ffffff" if self.icon_kind == "send" or self.underMouse() else "#bfc0ce")
+        if not self.isEnabled():
+            color = QColor("#727280")
+        pen = QPen(color, 2.1)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        cx, cy = self.width() // 2, self.height() // 2
+        if self.icon_kind == "edit":
+            painter.drawRoundedRect(QRectF(cx - 10, cy - 9, 18, 18), 3, 3)
+            painter.drawLine(cx - 3, cy + 4, cx + 10, cy - 9)
+            painter.drawLine(cx + 8, cy - 11, cx + 12, cy - 7)
+        elif self.icon_kind == "wave":
+            for dx, half_height in ((-9, 3), (-4, 7), (1, 10), (6, 6), (11, 3)):
+                painter.drawLine(cx + dx, cy - half_height, cx + dx, cy + half_height)
+        elif self.icon_kind == "chevron":
+            painter.drawLine(cx - 6, cy - 2, cx, cy + 4)
+            painter.drawLine(cx, cy + 4, cx + 6, cy - 2)
+        elif self.icon_kind == "plus":
+            painter.drawLine(cx - 7, cy, cx + 7, cy)
+            painter.drawLine(cx, cy - 7, cx, cy + 7)
+        elif self.icon_kind == "send":
+            painter.drawLine(cx, cy + 8, cx, cy - 8)
+            painter.drawLine(cx - 6, cy - 2, cx, cy - 8)
+            painter.drawLine(cx, cy - 8, cx + 6, cy - 2)
+        if self.attention_color:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(self.attention_color))
+            painter.drawEllipse(QRectF(self.width() - 10, 4, 6, 6))
+        painter.end()
 
 
 class StateSignalEmitter(QObject):
@@ -125,7 +307,7 @@ class StateSignalEmitter(QObject):
     appshot_signal = pyqtSignal()
     select_pet_signal = pyqtSignal(str)
     settings_changed_signal = pyqtSignal(dict)
-    chat_completed_signal = pyqtSignal(str, str, str)
+    chat_completed_signal = pyqtSignal(str, str, str, bool)
     call_pet_signal = pyqtSignal()
 
 
@@ -180,6 +362,7 @@ class DesktopPet(QWidget):
 
         # Chat session state for Antigravity 2.0
         self.is_thinking = False
+        self._chat_in_flight = False
         self.active_conversation_id = str(self.preferences.value("active_conversation_id", "") or "")
         self.last_response_text = ""
 
@@ -239,18 +422,19 @@ class DesktopPet(QWidget):
         self.response_card = QFrame(self)
         self.response_card.setStyleSheet("""
             QFrame {
-                background-color: rgba(24, 24, 27, 245);
-                border: 1px solid #3f3f46;
-                border-radius: 16px;
+                background-color: rgba(31, 31, 35, 240);
+                border: 1px solid #45454d;
+                border-radius: 18px;
             }
         """)
+        self.response_card.setFixedSize(416, 100)
         resp_layout = QVBoxLayout(self.response_card)
         resp_layout.setContentsMargins(14, 10, 14, 10)
         resp_layout.setSpacing(6)
 
         resp_header = QHBoxLayout()
-        self.resp_title = QLabel("✦ Antigravity 2.0", self.response_card)
-        self.resp_title.setStyleSheet("color: #a1a1aa; font-size: 11px; font-weight: bold;")
+        self.resp_title = QLabel("●  Antigravity", self.response_card)
+        self.resp_title.setStyleSheet("color: #36cc88; font-size: 12px; font-weight: 600;")
         self.copy_btn = QPushButton("คัดลอก", self.response_card)
         self.copy_btn.setFixedSize(50, 22)
         self.copy_btn.setStyleSheet("""
@@ -273,7 +457,7 @@ class DesktopPet(QWidget):
 
         self.resp_text = QTextEdit(self.response_card)
         self.resp_text.setReadOnly(True)
-        self.resp_text.setFixedHeight(120)
+        self.resp_text.setFixedHeight(43)
         self.resp_text.setStyleSheet("""
             QTextEdit {
                 background: transparent;
@@ -286,10 +470,10 @@ class DesktopPet(QWidget):
         """)
         resp_layout.addWidget(self.resp_text)
         self.response_card.hide()
-        self.main_layout.addWidget(self.response_card)
 
         # 2. Activity Tray Floating Card (Phase 1.3)
         self.activity_tray = QFrame(self)
+        self.activity_tray.setFixedSize(416, 200)
         self.activity_tray.setObjectName("activity_tray")
         self.activity_tray.setStyleSheet("""
             QFrame#activity_tray {
@@ -323,10 +507,10 @@ class DesktopPet(QWidget):
         self.tray_items_layout.setSpacing(4)
         tray_layout.addWidget(self.tray_items_container)
         self.activity_tray.hide()
-        self.main_layout.addWidget(self.activity_tray)
 
         # 3. Autocomplete Popup for @ and $ (Phase 2.2)
         self.autocomplete_popup = QFrame(self)
+        self.autocomplete_popup.setFixedSize(416, 210)
         self.autocomplete_popup.setObjectName("autocomplete_popup")
         self.autocomplete_popup.setStyleSheet("""
             QFrame#autocomplete_popup {
@@ -348,7 +532,6 @@ class DesktopPet(QWidget):
         self.ac_list_layout.setSpacing(2)
         ac_layout.addWidget(self.ac_list_container)
         self.autocomplete_popup.hide()
-        self.main_layout.addWidget(self.autocomplete_popup)
 
         # 4. Pet Sitting Space
         self.pet_space = QWidget(self)
@@ -358,90 +541,72 @@ class DesktopPet(QWidget):
 
         # 5. Unified Glassmorphic Floating Capsule Pill (Phase 2.1)
         self.chat_pill = QFrame(self)
-        self.chat_pill.setFixedHeight(50)
+        self.chat_pill.setFixedSize(146, 48)
         self.chat_pill.setStyleSheet("""
             QFrame#chat_pill {
-                background-color: rgba(31, 31, 35, 240);
-                border: 1px solid #36363c;
-                border-radius: 25px;
+                background-color: rgba(37, 37, 48, 247);
+                border: 1px solid #444451;
+                border-radius: 24px;
             }
         """)
         self.chat_pill.setObjectName("chat_pill")
         self.pill_layout = QHBoxLayout(self.chat_pill)
-        self.pill_layout.setContentsMargins(8, 4, 8, 4)
-        self.pill_layout.setSpacing(6)
+        self.pill_layout.setContentsMargins(7, 4, 7, 4)
+        self.pill_layout.setSpacing(0)
 
-        # A. Collapsed Capsule Bar: [✎ เริ่มแชท] [🎙] [🔔] [॥]
+        # A. Compact controls, matching the three-action Pet GPT capsule.
         self.collapsed_bar = QWidget(self.chat_pill)
         cb_layout = QHBoxLayout(self.collapsed_bar)
-        cb_layout.setContentsMargins(4, 0, 4, 0)
-        cb_layout.setSpacing(6)
+        cb_layout.setContentsMargins(0, 0, 0, 0)
+        cb_layout.setSpacing(0)
 
-        self.btn_open_composer = QPushButton("✎ เริ่มแชท", self.collapsed_bar)
+        self.btn_open_composer = IconButton("edit", self.collapsed_bar)
         self.btn_open_composer.setToolTip("เปิดกล่องพิมพ์ข้อความ (Win+Alt+P)")
+        self.btn_open_composer.setFixedSize(42, 36)
         self.btn_open_composer.setStyleSheet("""
             QPushButton {
-                background: #27272a;
-                color: #e4e4e7;
-                font-size: 12px;
-                font-weight: 500;
-                border: 1px solid #3f3f46;
-                border-radius: 15px;
-                padding: 6px 14px;
+                background: transparent;
+                color: #f0f0f5;
+                font-size: 22px;
+                border: none;
+                border-radius: 16px;
             }
             QPushButton:hover {
-                background: #3f3f46;
-                color: #ffffff;
+                background: #434354;
             }
         """)
         self.btn_open_composer.clicked.connect(lambda: self.set_floating_mode("composer"))
 
-        self.btn_voice = QPushButton("🎙", self.collapsed_bar)
-        self.btn_voice.setToolTip("สนทนาด้วยเสียง (Voice Chat)")
-        self.btn_voice.setFixedSize(32, 32)
+        self.btn_voice = IconButton("wave", self.collapsed_bar)
+        self.btn_voice.setToolTip("พิมพ์ด้วยเสียงผ่าน Windows (Win+H)")
+        self.btn_voice.setFixedSize(42, 36)
         self.btn_voice.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 color: #a1a1aa;
-                font-size: 15px;
+                font-size: 24px;
                 border: none;
+                border-left: 1px solid #484856;
                 border-radius: 16px;
             }
             QPushButton:hover {
                 background: #27272a;
-                color: #38bdf8;
+                color: #f0f0f5;
             }
         """)
         self.btn_voice.clicked.connect(self.toggle_voice_mode)
 
-        self.btn_bell = QPushButton("🔔", self.collapsed_bar)
-        self.btn_bell.setToolTip("เปิด Activity Tray (รายการงานย่อย)")
-        self.btn_bell.setFixedSize(34, 32)
-        self.btn_bell.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #a1a1aa;
-                font-size: 14px;
-                border: none;
-                border-radius: 16px;
-            }
-            QPushButton:hover {
-                background: #27272a;
-                color: #facc15;
-            }
-        """)
-        self.btn_bell.clicked.connect(self.toggle_activity_tray)
-
-        self.btn_open_app = QPushButton("॥", self.collapsed_bar)
-        self.btn_open_app.setToolTip("เปิด Antigravity 2.0")
-        self.btn_open_app.setFixedSize(30, 32)
+        self.btn_open_app = IconButton("chevron", self.collapsed_bar)
+        self.btn_open_app.setToolTip("เมนู Pet และกิจกรรม")
+        self.btn_open_app.setFixedSize(42, 36)
         self.btn_open_app.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 color: #a1a1aa;
-                font-size: 14px;
+                font-size: 19px;
                 font-weight: bold;
                 border: none;
+                border-left: 1px solid #484856;
                 border-radius: 15px;
             }
             QPushButton:hover {
@@ -449,11 +614,10 @@ class DesktopPet(QWidget):
                 color: #ffffff;
             }
         """)
-        self.btn_open_app.clicked.connect(self.open_antigravity)
+        self.btn_open_app.clicked.connect(self._show_plus_menu)
 
         cb_layout.addWidget(self.btn_open_composer)
         cb_layout.addWidget(self.btn_voice)
-        cb_layout.addWidget(self.btn_bell)
         cb_layout.addWidget(self.btn_open_app)
         self.pill_layout.addWidget(self.collapsed_bar)
 
@@ -463,7 +627,7 @@ class DesktopPet(QWidget):
         comp_layout.setContentsMargins(2, 0, 2, 0)
         comp_layout.setSpacing(6)
 
-        self.plus_btn = QPushButton("+", self.composer_bar)
+        self.plus_btn = IconButton("plus", self.composer_bar)
         self.plus_btn.setToolTip("เมนูบริบท สกิล และประวัติ")
         self.plus_btn.setFixedSize(30, 30)
         self.plus_btn.setStyleSheet("""
@@ -483,7 +647,7 @@ class DesktopPet(QWidget):
         self.plus_btn.clicked.connect(self._show_plus_menu)
 
         self.chat_input = QLineEdit(self.composer_bar)
-        self.chat_input.setPlaceholderText("เริ่มแชทใหม่ (พิมพ์ @ หรือ $ เพื่อแท็ก)")
+        self.chat_input.setPlaceholderText("เริ่มแชทใหม่")
         self.chat_input.setStyleSheet("""
             QLineEdit {
                 background: transparent;
@@ -517,12 +681,13 @@ class DesktopPet(QWidget):
             }
         """)
         self.appshot_btn.clicked.connect(self.capture_appshot)
+        self.appshot_btn.hide()
 
-        self.send_btn = QPushButton("↑", self.composer_bar)
+        self.send_btn = IconButton("send", self.composer_bar)
         self.send_btn.setFixedSize(32, 32)
         self.send_btn.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #a855f7, stop:1 #7c3aed);
+                background: #e451ad;
                 color: #ffffff;
                 font-size: 16px;
                 font-weight: bold;
@@ -530,7 +695,7 @@ class DesktopPet(QWidget):
                 border-radius: 16px;
             }
             QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #c084fc, stop:1 #9333ea);
+                background: #f071c0;
             }
         """)
         self.send_btn.clicked.connect(self._submit_quick_chat)
@@ -540,12 +705,11 @@ class DesktopPet(QWidget):
         self.btn_collapse.setFixedSize(26, 26)
         self.btn_collapse.setStyleSheet("QPushButton { background: transparent; color: #a1a1aa; border: none; font-size: 14px; font-weight: bold; } QPushButton:hover { color: #fff; }")
         self.btn_collapse.clicked.connect(lambda: self.set_floating_mode("collapsed"))
+        self.btn_collapse.hide()
 
         comp_layout.addWidget(self.plus_btn)
         comp_layout.addWidget(self.chat_input)
-        comp_layout.addWidget(self.appshot_btn)
         comp_layout.addWidget(self.send_btn)
-        comp_layout.addWidget(self.btn_collapse)
         self.composer_bar.hide()
         self.pill_layout.addWidget(self.composer_bar)
 
@@ -588,7 +752,10 @@ class DesktopPet(QWidget):
         self.status_bar.hide()
         self.pill_layout.addWidget(self.status_bar)
 
-        self.main_layout.addWidget(self.chat_pill)
+        self.main_layout.addWidget(self.chat_pill, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.main_layout.addWidget(self.response_card, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.main_layout.addWidget(self.activity_tray, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.main_layout.addWidget(self.autocomplete_popup, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Initial mode
         self.set_floating_mode("collapsed")
@@ -596,17 +763,7 @@ class DesktopPet(QWidget):
 
     def get_pet_render_offset(self, in_composer_mode: bool) -> tuple[int, int]:
         target_w = int(CELL_WIDTH * self.scale_factor)
-        card_offset = 160 if self.response_card.isVisible() else 0
-        tray_offset = 200 if getattr(self, "activity_tray_visible", False) else 0
-        ac_offset = 120 if (hasattr(self, "autocomplete_popup") and self.autocomplete_popup.isVisible()) else 0
-        top_offset = card_offset + tray_offset + ac_offset
-
-        if in_composer_mode:
-            pet_x = 440 - target_w - 38
-        else:
-            pet_x = max(0, (self.width() - target_w) // 2)
-        pet_y = top_offset + 10
-        return pet_x, pet_y
+        return max(0, (self.width() - target_w) // 2), 10
 
     def update_window_size(self, preserve_pet_pos: bool = True):
         """Anchors pet in exact screen position when toggling bar states."""
@@ -618,9 +775,9 @@ class DesktopPet(QWidget):
         else:
             self.pet_space.hide()
 
-        card_offset = 160 if self.response_card.isVisible() else 0
-        tray_offset = 200 if getattr(self, "activity_tray_visible", False) else 0
-        ac_offset = 120 if (hasattr(self, "autocomplete_popup") and self.autocomplete_popup.isVisible()) else 0
+        card_offset = 106 if self.response_card.isVisible() else 0
+        tray_offset = 206 if getattr(self, "activity_tray_visible", False) else 0
+        ac_offset = 216 if (hasattr(self, "autocomplete_popup") and self.autocomplete_popup.isVisible()) else 0
 
         is_comp = (self.floating_mode == "composer")
 
@@ -630,13 +787,15 @@ class DesktopPet(QWidget):
             current_screen_pet_y = self.y() + old_pet_y
 
         if self.floating_mode == "composer":
-            w = 440
+            pill_width = 416
         elif self.floating_mode == "status":
-            w = 280
+            pill_width = 280
         else:
-            w = 210
+            pill_width = 146
 
-        h = self.pet_space_height + 56 + card_offset + tray_offset + ac_offset
+        self.chat_pill.setFixedWidth(pill_width)
+        w = max(pill_width, 416 if (card_offset or tray_offset or ac_offset) else 0) + 20
+        h = self.pet_space_height + 68 + card_offset + tray_offset + ac_offset
         self.setFixedSize(w, h)
 
         if preserve_pet_pos and not self.mini_mode:
@@ -757,6 +916,13 @@ class DesktopPet(QWidget):
         self.open_antigravity()
 
     def _update_bell_badge(self, has_attention: bool, top_status: str):
+        if hasattr(self, "btn_open_app"):
+            self.btn_open_app.attention_color = (
+                "#facc15" if top_status == "needs_input" else
+                "#ef4444" if top_status == "blocked" else
+                "#22c55e"
+            ) if has_attention else None
+            self.btn_open_app.update()
         bell_btns = []
         if hasattr(self, "btn_bell"):
             bell_btns.append(self.btn_bell)
@@ -809,19 +975,16 @@ class DesktopPet(QWidget):
                 item.widget().deleteLater()
 
         if mode == "file":
-            candidates = [
-                "ROADMAP.md", "README.md", "settings.html", "main.py",
-                "pet_window.py", "antigravity_bridge.py", "spritesheet.py",
-                "scripts/pet_tools.py", "assets/hime_pet.png", "assets/swan_pet.png"
-            ]
+            candidates = get_workspace_files(self.base_dir)
             self.ac_title.setText("📄 อ้างอิงไฟล์ใน Workspace (@)")
         else:
-            candidates = [
-                "create-pet", "ui-ux-pro-max", "antigravity-guide",
-                "alphagenome-single-variant-analysis", "credentials"
-            ]
+            candidates = get_installed_skills(self.base_dir)
             self.ac_title.setText("⚡ เรียกใช้ Skill ($)")
 
+        if not candidates:
+            empty = QLabel("ไม่พบรายการในเครื่อง", self.autocomplete_popup)
+            empty.setStyleSheet("color: #a8a8b3; padding: 8px;")
+            self.ac_list_layout.addWidget(empty)
         for c in candidates[:6]:
             btn = QPushButton(c, self.autocomplete_popup)
             btn.setStyleSheet("""
@@ -904,16 +1067,21 @@ class DesktopPet(QWidget):
         self.update_window_size(preserve_pet_pos=False)
 
     def toggle_voice_mode(self):
-        self.voice_listening = not self.voice_listening
-        if self.voice_listening:
-            self.set_floating_mode("composer")
-            self.chat_input.setPlaceholderText("🎙 กำลังฟังเสียงสดของคุณ... (คลิกอีกครั้งเพื่อส่ง)")
-            self.set_action("waving", "กำลังฟังเสียงสดของคุณค่ะ 🎙")
-        else:
-            self.chat_input.setPlaceholderText("เริ่มแชทใหม่ (พิมพ์ @ หรือ $ เพื่อแท็ก)")
-            if not self.chat_input.text().strip():
-                self.chat_input.setText("ช่วยสรุปภาพรวม Roadmap และกิจกรรมล่าสุดให้หน่อย")
-            self.set_action("review", "บันทึกเสียงแล้ว พร้อมส่ง ✨")
+        """Focus the composer and open Windows dictation without inventing a transcript."""
+        self.set_floating_mode("composer")
+        self.raise_()
+        self.activateWindow()
+        self.chat_input.setFocus()
+        self.set_action("waving", "พิมพ์ด้วยเสียงผ่าน Windows (Win+H)")
+        if sys.platform == "win32":
+            def open_dictation():
+                user32 = ctypes.windll.user32
+                vk_win, vk_h, key_up = 0x5B, 0x48, 0x0002
+                user32.keybd_event(vk_win, 0, 0, 0)
+                user32.keybd_event(vk_h, 0, 0, 0)
+                user32.keybd_event(vk_h, 0, key_up, 0)
+                user32.keybd_event(vk_win, 0, key_up, 0)
+            QTimer.singleShot(100, open_dictation)
 
     def enterEvent(self, event):
         super().enterEvent(event)
@@ -925,8 +1093,9 @@ class DesktopPet(QWidget):
         pass
 
     def _show_plus_menu(self):
-        """Requirement: Rich '+' popup menu matching Image 2 & 3 with Plugins & Conversations."""
+        """Show real Pet actions and available Antigravity context."""
         menu = QMenu(self)
+        menu.setMinimumWidth(330)
         menu.setStyleSheet("""
             QMenu {
                 background-color: #1e1e24;
@@ -961,7 +1130,7 @@ class DesktopPet(QWidget):
         """)
 
         # 1. Quick Actions
-        act_new = menu.addAction("➕ เริ่มแชทใหม่ (เริ่มบทสนทนาใหม่ใน Antigravity 2.0)")
+        act_new = menu.addAction("➕ เริ่มแชทผ่าน Pet ใหม่")
         act_new.triggered.connect(self._reset_chat)
 
         act_appshot = menu.addAction("📷 จับภาพหน้าจอปัจจุบัน (Appshot - Win+Alt+S)")
@@ -973,29 +1142,29 @@ class DesktopPet(QWidget):
         act_mini = menu.addAction("🔲 โหมด Mini (ซ่อน/แสดงสัตว์เลี้ยง)" if not self.mini_mode else "🐱 แสดงตัวสัตว์เลี้ยง")
         act_mini.triggered.connect(self.toggle_mini_mode)
 
-        act_voice = menu.addAction("🎙 สนทนาด้วยเสียง (Voice Input)")
+        act_voice = menu.addAction("≋ พิมพ์ด้วยเสียง (Windows Win+H)")
         act_voice.triggered.connect(self.toggle_voice_mode)
 
         menu.addSeparator()
 
-        # 2. Plugins & Skills Section (Matches Image 2)
-        menu.addSection("ปลั๊กอิน & สกิล (Plugins & Skills)")
-        plugins = [
-            ("🎨 tldraw", "วาดและออกแบบไดอะแกรมร่วมกับเอเจนต์", "@tldraw "),
-            ("🔍 ค้นหาเว็บ", "ค้นหาข้อมูลออนไลน์และเอกสาร (Web Search)", "@web-search "),
-            ("⚡ รันโค้ด", "รันคำสั่งและประมวลผลโค้ด (Code Executor)", "@code-executor "),
-            ("🌐 เว็บเบราว์เซอร์", "ควบคุมและเปิดเว็บเบราว์เซอร์อัตโนมัติ (Browser)", "@browser "),
-            ("📁 ไฟล์และข้อมูล", "อ่าน ตรวจสอบ และแก้ไขไฟล์ในโปรเจกต์", "@file-tools "),
-            ("📄 เอกสาร & PDF", "อ่าน สร้าง และวิเคราะห์เอกสาร PDF", "@pdf "),
-        ]
-        for name, desc, tag in plugins:
-            act = menu.addAction(f"{name}   {desc}")
-            act.triggered.connect(lambda checked=False, t=tag: self._insert_plugin_tag(t))
+        # These lists come from disk. A ChatGPT plugin name is not an Antigravity tool.
+        skill_menu = menu.addMenu("⚡ สกิลที่ติดตั้ง")
+        skills = get_installed_skills(self.base_dir)
+        for skill in skills:
+            action = skill_menu.addAction(skill)
+            action.triggered.connect(lambda checked=False, name=skill: self._insert_plugin_tag(f"${name} "))
+        if not skills:
+            skill_menu.addAction("ไม่พบสกิลที่ติดตั้ง").setEnabled(False)
+
+        file_menu = menu.addMenu("📄 ไฟล์ในโปรเจกต์")
+        for path in get_workspace_files(self.base_dir):
+            action = file_menu.addAction(path)
+            action.triggered.connect(lambda checked=False, name=path: self._insert_plugin_tag(f"@[{name}] "))
 
         menu.addSeparator()
 
-        # 3. Conversations in Antigravity 2.0 Section (Matches Image 3)
-        menu.addSection("การสนทนาใน Antigravity 2.0")
+        # Only CLI conversations can be resumed through --conversation.
+        menu.addSection("แชทผ่าน Pet ล่าสุด")
         recent_convos = get_recent_antigravity_conversations(limit=7)
         if recent_convos:
             for item in recent_convos:
@@ -1027,11 +1196,12 @@ class DesktopPet(QWidget):
         menu.exec(QCursor.pos())
 
     def _insert_plugin_tag(self, tag: str):
+        self.set_floating_mode("composer")
         self.chat_input.setText(tag + self.chat_input.text())
         self.chat_input.setFocus()
 
     def _switch_conversation(self, cid: str, title: str):
-        """Switches active session to a past Antigravity 2.0 conversation."""
+        """Resume a previous Antigravity CLI conversation."""
         self.active_conversation_id = cid
         self.preferences.setValue("active_conversation_id", cid)
         self.chat_input.setPlaceholderText(f"ต่อแชท: {title[:25]}...")
@@ -1048,11 +1218,21 @@ class DesktopPet(QWidget):
         self.set_action("idle", "เริ่มบทสนทนาใหม่แล้ว")
 
     def _submit_quick_chat(self):
-        """Runs prompt and records in Antigravity 2.0."""
+        """Run a Quick Chat turn through the Antigravity CLI."""
         text = self.chat_input.text().strip()
-        if not text:
+        if not text or self._chat_in_flight:
             return
-        self.set_thinking(True, text)
+        self._chat_in_flight = True
+        self.chat_input.clear()
+        self.is_thinking = True
+        self.set_floating_mode("collapsed")
+        self.resp_title.setText(text[:32] + ("…" if len(text) > 32 else ""))
+        self.resp_title.setStyleSheet("color: #f0f0f5; font-size: 12px; font-weight: 600;")
+        self.resp_text.setPlainText("กำลังคิด...")
+        self.response_card.show()
+        self.update_window_size(preserve_pet_pos=True)
+        self.set_action("thinking", text)
+        self.send_btn.setEnabled(False)
         job_id = threading.get_ident()
         cid = self.active_conversation_id
 
@@ -1068,48 +1248,58 @@ class DesktopPet(QWidget):
 
                 res = subprocess.run(
                     args,
+                    cwd=self.base_dir,
                     capture_output=True,
-                    timeout=120,
+                    timeout=130,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 )
                 out = res.stdout.decode("utf-8", errors="replace") if res.stdout else ""
                 err = res.stderr.decode("utf-8", errors="replace") if res.stderr else ""
                 resp_text = ""
                 new_cid = conversation_id
+                if res.returncode:
+                    raise RuntimeError((err or out or "Antigravity CLI ไม่สำเร็จ").strip()[-500:])
                 if "{" in out and "}" in out:
                     try:
                         json_str = out[out.find("{"):out.rfind("}") + 1]
                         payload = json.loads(json_str)
-                        resp_text = payload.get("response", "") or payload.get("error", "")
+                        if payload.get("status") not in (None, "SUCCESS") and not payload.get("response"):
+                            raise RuntimeError(str(payload.get("error") or payload.get("status")))
+                        resp_text = payload.get("response", "")
                         new_cid = payload.get("conversation_id", conversation_id)
+                    except RuntimeError:
+                        raise
                     except Exception:
                         pass
 
                 if not resp_text:
                     resp_text = out.strip() or err.strip()
+                if not resp_text:
+                    raise RuntimeError("Antigravity ไม่ส่งคำตอบกลับมา")
 
                 if new_cid:
                     sync_conversation_to_antigravity(new_cid)
-
-                if not resp_text:
-                    resp_text = "เสร็จเรียบร้อยแล้วค่ะ! ✨"
-                self.state_emitter.chat_completed_signal.emit(str(job_id), new_cid or "", resp_text)
+                self.state_emitter.chat_completed_signal.emit(str(job_id), new_cid or "", resp_text, False)
             except Exception as e:
-                self.state_emitter.chat_completed_signal.emit(str(job_id), cid or "", f"เกิดข้อผิดพลาด: {str(e)}")
+                self.state_emitter.chat_completed_signal.emit(str(job_id), cid or "", str(e), True)
 
         t = threading.Thread(target=worker, args=(text, cid), daemon=True)
         t.start()
 
-    def _on_chat_completed(self, job_id: str, new_conversation_id: str, response: str):
-        if new_conversation_id:
+    def _on_chat_completed(self, job_id: str, new_conversation_id: str, response: str, is_error: bool):
+        self._chat_in_flight = False
+        if new_conversation_id and not is_error:
             self.active_conversation_id = new_conversation_id
             self.preferences.setValue("active_conversation_id", new_conversation_id)
         self.set_thinking(False)
+        self.send_btn.setEnabled(True)
         self.last_response_text = response
+        self.resp_title.setText("●  ส่งไม่สำเร็จ" if is_error else "●  Antigravity ตอบแล้ว")
+        self.resp_title.setStyleSheet(f"color: {'#fb7185' if is_error else '#36cc88'}; font-size: 12px; font-weight: 600;")
         self.resp_text.setPlainText(response)
         self.response_card.show()
         self.update_window_size(preserve_pet_pos=True)
-        self.set_action("review", "เสร็จแล้วค่ะ! ✨")
+        self.set_action("failed" if is_error else "review", "ส่งไม่สำเร็จ" if is_error else "เสร็จแล้วค่ะ! ✨")
 
     def hide_response_card(self):
         self.response_card.hide()
@@ -1175,13 +1365,13 @@ class DesktopPet(QWidget):
             self.show()
             self.raise_()
             self.activateWindow()
-            self.quick_chat_mode = True
-            self.update_window_size(preserve_pet_pos=True)
+            self.set_floating_mode("composer")
             self.chat_input.setFocus()
             self.set_action("waving", "สวัสดีค่ะ! ✨")
         else:
             self.raise_()
             self.activateWindow()
+            self.set_floating_mode("composer")
             self.chat_input.setFocus()
 
     def open_antigravity(self):
@@ -1371,7 +1561,7 @@ class DesktopPet(QWidget):
         self.state_emitter.state_received.emit(state, reason)
 
     def _on_external_state(self, state: str, reason: str):
-        if self.is_dragging:
+        if self.is_dragging or self._chat_in_flight:
             return
 
         self.manual_action_expire_time = time.time() + 4.5
@@ -1487,8 +1677,47 @@ class DesktopPet(QWidget):
             self.open_antigravity()
             event.accept()
 
+    def _show_pet_context_menu(self, global_pos=None):
+        """Sleek minimalist dark context menu matching Antigravity design."""
+        menu = QMenu(self)
+        menu.setWindowFlags(menu.windowFlags() | Qt.WindowType.FramelessWindowHint)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1e1e24;
+                border: 1px solid #383a46;
+                border-radius: 12px;
+                padding: 6px;
+                font-family: 'Segoe UI', -apple-system, sans-serif;
+            }
+            QMenu::item {
+                color: #f4f4f5;
+                font-size: 13px;
+                font-weight: 500;
+                padding: 8px 18px 8px 10px;
+                border-radius: 8px;
+                margin: 2px 2px;
+            }
+            QMenu::item:selected {
+                background-color: #2b2c37;
+                color: #ffffff;
+            }
+        """)
+
+        act_settings = menu.addAction(svg_to_icon(SETTINGS_SVG), "  การตั้งค่า")
+        act_settings.triggered.connect(lambda: webbrowser.open("http://127.0.0.1:21420/settings"))
+
+        act_hide = menu.addAction(svg_to_icon(HIDE_SVG), "  ซ่อน Mini")
+        act_hide.triggered.connect(lambda: self.set_visibility(False))
+
+        if global_pos:
+            menu.exec(global_pos)
+        else:
+            menu.exec(QCursor.pos())
+
     def contextMenuEvent(self, event: QContextMenuEvent):
-        self._show_plus_menu()
+        self._show_pet_context_menu(event.globalPos())
+
 
     def set_scale(self, factor: float):
         self.scale_factor = factor

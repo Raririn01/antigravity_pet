@@ -20,7 +20,7 @@ An interactive, responsive desktop companion & Quick Chat widget for **Google An
   - 🚀 **Agy Bot**: Antigravity cyber coding companion.
   - 🔘 **Mini Mode**: Compact floating pill with Quick Chat & Activity controls.
 - **Antigravity Live State Sync**: Monitors active Antigravity conversations & transcripts to dynamically animate states (`idle`, `thinking`, `review / celebrate`, `waiting`, `failed`).
-- **Integrated Quick Chat**: Send prompts directly to the Antigravity CLI in plan mode without switching context.
+- **Integrated Quick Chat**: Send prompts through the Antigravity CLI without switching context. Pet chat keeps its own CLI conversation ID.
 - **Modern Web Dashboard**: Configure scale, toggle auto-roaming, switch pets, view recent conversations, or upload custom sprite sheets at `http://127.0.0.1:21420/settings`.
 - **Custom Pet Upload**: Supports ChatGPT Pet v1 (8×9 grid) and v2 (8×11 grid) PNG/WebP sprite sheets up to 20 MiB.
 - **External Trigger API**: Trigger pet animations via HTTP or Python script (`python notify.py celebrate`).
@@ -32,7 +32,7 @@ An interactive, responsive desktop companion & Quick Chat widget for **Google An
 ### Prerequisites
 - **Windows 10 / 11**
 - **Python 3.10+** (Make sure to check *"Add Python to PATH"* during installation)
-- *(Optional)* **Antigravity / Antigravity IDE** & CLI (`agy`) for transcript synchronization and Quick Chat.
+- **Antigravity CLI (`agy`)** for Quick Chat; the desktop app is optional for live activity and opening conversations.
 
 ### 1. Clone the repository
 ```bash
@@ -59,14 +59,18 @@ python main.py
 | Action | Control | Description |
 | :--- | :--- | :--- |
 | **Move** | Left Click + Drag | Drag pet anywhere on your desktop. Position is saved automatically. |
-| **Poke / Greet** | Left Click | Play waving or poke animation. |
-| **Celebrate** | Double Click | Play celebratory spin / review animation. |
+| **Quick Chat** | Left Click | Open or close the message composer. |
+| **Open Antigravity** | Double Click | Launch or focus Antigravity. |
 | **Context Menu** | Right Click | Open context menu to access Settings, toggle Mini Mode, open Antigravity, or hide. |
 | **Summon Pet** | `Win + Alt + P` | Global hotkey to bring pet to the front / focus Quick Chat. |
 | **Instant Appshot** | `Win + Alt + S` | Capture active screen instantly and attach `@[assets/appshot_latest.png]` to chat. |
-| **Glass Capsule Bar** | Bottom pill | Unified controls: `[✎]` Quick Chat, `[🎙]` Voice, `[🔔]` Activity Tray, `[॥]` Menu. |
-| **Activity Tray** | `🔔` Bell icon | Real-time card displaying 3-5 background threads with status badges (`Running`, `Needs input`, `Ready`, `Blocked`). |
-| **Context Autocomplete** | `@` / `$` tags | Type `@` for Workspace files or `$` for Skills directly in Quick Chat. |
+| **Compact Pet Bar** | Bottom pill | `[✎]` opens Quick Chat, the waveform opens Windows dictation, and `[⌄]` opens the Pet menu. |
+| **Activity Tray** | Pet menu | Displays recent Antigravity work with status badges (`Running`, `Needs input`, `Ready`, `Blocked`). |
+| **Context Autocomplete** | `@` / `$` tags | Lists files in this project and skills actually installed for Antigravity. |
+
+---
+
+Quick Chat uses a separate Antigravity CLI conversation. It does not insert a message into the currently open Antigravity desktop chat. The voice button starts Windows dictation (`Win + H`) in the composer; microphone availability depends on Windows settings.
 
 ---
 
