@@ -40,14 +40,11 @@ def run_quick_chat(job_id, prompt, conversation_id):
             args,
             cwd=SCRIPT_DIR,
             capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
             timeout=130,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
         )
-        out = result.stdout or ""
-        err = result.stderr or ""
+        out = result.stdout.decode("utf-8", errors="replace") if result.stdout else ""
+        err = result.stderr.decode("utf-8", errors="replace") if result.stderr else ""
         if result.returncode:
             raise RuntimeError((err or out or "Antigravity CLI failed").strip()[-500:])
         payload = {}

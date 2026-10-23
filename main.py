@@ -1,3 +1,6 @@
+import os, sys
+os.environ["PYTHONUTF8"] = "1"
+os.environ["PYTHONIOENCODING"] = "utf-8"
 """
 Main launcher for Antigravity Desktop Pet.
 """

@@ -1069,14 +1069,11 @@ class DesktopPet(QWidget):
                 res = subprocess.run(
                     args,
                     capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
                     timeout=120,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 )
-                out = res.stdout or ""
-                err = res.stderr or ""
+                out = res.stdout.decode("utf-8", errors="replace") if res.stdout else ""
+                err = res.stderr.decode("utf-8", errors="replace") if res.stderr else ""
                 resp_text = ""
                 new_cid = conversation_id
                 if "{" in out and "}" in out:
