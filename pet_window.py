@@ -28,7 +28,7 @@ from typing import Dict, List, Optional
 from PyQt6.QtCore import Qt, QPoint, QTimer, QRectF, pyqtSignal, QObject, QSettings
 from PyQt6.QtGui import (
     QImage, QPixmap, QPainter, QAction, QContextMenuEvent,
-    QMouseEvent, QTransform, QColor, QFont, QPen, QBrush, QCursor
+    QMouseEvent, QTransform, QColor, QFont, QPen, QBrush, QCursor, QIcon
 )
 from PyQt6.QtWidgets import (
     QWidget, QMenu, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
@@ -122,8 +122,35 @@ HIDE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" vie
   <line x1="2" y1="2" x2="22" y2="22"/>
 </svg>"""
 
+AG_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+  <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+  <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+  <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+</svg>"""
+
+CHAT_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+</svg>"""
+
+TRAY_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+</svg>"""
+
+MINI_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+  <line x1="9" y1="3" x2="9" y2="21"/>
+</svg>"""
+
+CLOSE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="18" y1="6" x2="6" y2="18"/>
+  <line x1="6" y1="6" x2="18" y2="18"/>
+</svg>"""
+
 def svg_to_icon(svg_str, size=18):
     try:
+        from PyQt6.QtGui import QIcon
         from PyQt6.QtSvg import QSvgRenderer
         from PyQt6.QtCore import QByteArray
         renderer = QSvgRenderer(QByteArray(svg_str.encode("utf-8")))
@@ -134,7 +161,10 @@ def svg_to_icon(svg_str, size=18):
         painter.end()
         return QIcon(pixmap)
     except Exception:
-        return QIcon()
+        try:
+            return QIcon()
+        except Exception:
+            return None
 
 def get_recent_antigravity_conversations(limit: int = 10):
     """Retrieve conversations across Desktop App, IDE, and CLI."""
@@ -1679,44 +1709,74 @@ class DesktopPet(QWidget):
 
     def _show_pet_context_menu(self, global_pos=None):
         """Sleek minimalist dark context menu matching Antigravity design."""
-        menu = QMenu(self)
-        menu.setWindowFlags(menu.windowFlags() | Qt.WindowType.FramelessWindowHint)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #1e1e24;
-                border: 1px solid #383a46;
-                border-radius: 12px;
-                padding: 6px;
-                font-family: 'Segoe UI', -apple-system, sans-serif;
-            }
-            QMenu::item {
-                color: #f4f4f5;
-                font-size: 13px;
-                font-weight: 500;
-                padding: 8px 18px 8px 10px;
-                border-radius: 8px;
-                margin: 2px 2px;
-            }
-            QMenu::item:selected {
-                background-color: #2b2c37;
-                color: #ffffff;
-            }
-        """)
+        try:
+            menu = QMenu(self)
+            menu.setWindowFlags(menu.windowFlags() | Qt.WindowType.FramelessWindowHint)
+            menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            menu.setStyleSheet("""
+                QMenu {
+                    background-color: #1e1e24;
+                    border: 1px solid #383a46;
+                    border-radius: 12px;
+                    padding: 6px;
+                    font-family: 'Segoe UI', -apple-system, sans-serif;
+                }
+                QMenu::item {
+                    color: #f4f4f5;
+                    font-size: 13px;
+                    font-weight: 500;
+                    padding: 8px 18px 8px 10px;
+                    border-radius: 8px;
+                    margin: 2px 2px;
+                }
+                QMenu::item:selected {
+                    background-color: #2b2c37;
+                    color: #ffffff;
+                }
+                QMenu::separator {
+                    height: 1px;
+                    background: #343744;
+                    margin: 4px 6px;
+                }
+            """)
 
-        act_settings = menu.addAction(svg_to_icon(SETTINGS_SVG), "  การตั้งค่า")
-        act_settings.triggered.connect(lambda: webbrowser.open("http://127.0.0.1:21420/settings"))
+            act_ag = menu.addAction(svg_to_icon(AG_SVG), "  เปิด Antigravity 2.0")
+            act_ag.triggered.connect(self.open_antigravity)
 
-        act_hide = menu.addAction(svg_to_icon(HIDE_SVG), "  ซ่อน Mini")
-        act_hide.triggered.connect(lambda: self.set_visibility(False))
+            act_chat = menu.addAction(svg_to_icon(CHAT_SVG), "  สลับแถบแชทด่วน (Quick Chat)")
+            act_chat.triggered.connect(self.toggle_quick_chat_mode)
 
-        if global_pos:
-            menu.exec(global_pos)
-        else:
-            menu.exec(QCursor.pos())
+            act_tray = menu.addAction(svg_to_icon(TRAY_SVG), "  ถาดกิจกรรม AI (Activity Tray)")
+            act_tray.triggered.connect(self.toggle_activity_tray)
+
+            act_settings = menu.addAction(svg_to_icon(SETTINGS_SVG), "  การตั้งค่าสัตว์เลี้ยง...")
+            act_settings.triggered.connect(lambda: webbrowser.open("http://127.0.0.1:21420/settings"))
+
+            menu.addSeparator()
+
+            mini_label = "  🐱 แสดงตัวสัตว์เลี้ยง" if self.mini_mode else "  🔲 โหมด Mini (แสดงเฉพาะแถบ)"
+            act_mini = menu.addAction(svg_to_icon(MINI_SVG), mini_label)
+            act_mini.triggered.connect(self.toggle_mini_mode)
+
+            act_hide = menu.addAction(svg_to_icon(HIDE_SVG), "  ซ่อนสัตว์เลี้ยง (เรียกคืนผ่านการตั้งค่า)")
+            act_hide.triggered.connect(lambda: self.set_visibility(False))
+
+            menu.addSeparator()
+
+            act_quit = menu.addAction(svg_to_icon(CLOSE_SVG), "  ปิดโปรแกรม (Exit Pet)")
+            act_quit.triggered.connect(QApplication.instance().quit)
+
+            target_pos = global_pos if global_pos else QCursor.pos()
+            menu.exec(target_pos)
+        except Exception as e:
+            print(f"[ERROR] Context menu failed: {e}")
 
     def contextMenuEvent(self, event: QContextMenuEvent):
-        self._show_pet_context_menu(event.globalPos())
+        try:
+            self._show_pet_context_menu(event.globalPos())
+            event.accept()
+        except Exception as e:
+            print(f"[ERROR] contextMenuEvent: {e}")
 
 
     def set_scale(self, factor: float):
