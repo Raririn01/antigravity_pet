@@ -47,3 +47,8 @@ assets/appshot_*.png
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec

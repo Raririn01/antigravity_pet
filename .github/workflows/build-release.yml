@@ -1,0 +1,61 @@
+name: Build Standalone Windows App (.EXE)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Generate App Icon
+        run: |
+          python -c "from PIL import Image; import os; src = 'assets/hime_preview.png' if os.path.exists('assets/hime_preview.png') else 'assets/default_pet.png'; Image.open(src).save('assets/app_icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+
+      - name: Build Executable with PyInstaller
+        run: |
+          pyinstaller --noconfirm --onedir --windowed `
+            --name "AntigravityPet" `
+            --icon "assets/app_icon.ico" `
+            --add-data "assets;assets" `
+            --add-data "settings.html;." `
+            main.py
+
+      - name: Compress Release Archive
+        run: |
+          Compress-Archive -Path dist\AntigravityPet\* -DestinationPath AntigravityPet-Windows.zip
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AntigravityPet-Windows
+          path: AntigravityPet-Windows.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AntigravityPet-Windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

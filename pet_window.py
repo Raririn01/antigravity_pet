@@ -385,7 +385,10 @@ class DesktopPet(QWidget):
         self.last_drag_x = 0
         self.last_user_interaction = time.time()
 
-        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, "frozen", False):
+            self.base_dir = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        else:
+            self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.assets_dir = os.path.join(self.base_dir, "assets")
         self.default_spritesheet_path = spritesheet_path
         self.current_spritesheet_path = spritesheet_path

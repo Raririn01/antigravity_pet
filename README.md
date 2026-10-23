@@ -5,7 +5,7 @@ An interactive, responsive desktop companion & Quick Chat widget for **Google An
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-0078D6?logo=windows)
 ![GUI](https://img.shields.io/badge/GUI-PyQt6-41CD52?logo=qt)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-orange)
 
 ---
 
@@ -29,28 +29,34 @@ An interactive, responsive desktop companion & Quick Chat widget for **Google An
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### วิธีที่ 1: สำหรับผู้ใช้งานทั่วไป (Standalone .EXE - ไม่ต้องติดตั้ง Python)
+1. ไปที่หน้า [GitHub Releases](https://github.com/Raririn01/antigravity_pet/releases) แล้วดาวน์โหลดไฟล์ `AntigravityPet-Windows.zip`
+2. แตกไฟล์ ZIP ออกมา
+3. ดับเบิลคลิกที่ **`AntigravityPet.exe`** เพื่อเริ่มเล่นได้ทันที!
+
+> หรือหากต้องการคอมไพล์เป็นไฟล์ `.exe` เองในเครื่อง เพียงดับเบิลคลิกไฟล์ **`build_exe.bat`**
+
+---
+
+### วิธีที่ 2: สำหรับนักพัฒนา (Developer Mode / Run with Python)
+#### สิ่งที่ต้องเตรียม
 - **Windows 10 / 11**
-- **Python 3.10+** (Make sure to check *"Add Python to PATH"* during installation)
-- **Antigravity CLI (`agy`)** for Quick Chat; the desktop app is optional for live activity and opening conversations.
+- **Python 3.10+** (เลือก *"Add Python to PATH"* ขณะติดตั้ง)
+- **Antigravity CLI (`agy`)**
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/<your-username>/desktop-pet.git
-cd desktop-pet
-```
-
-### 2. Install dependencies
-Double-click `install.bat` or run:
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Launch Desktop Pet
-Double-click `run_pet.bat` or run:
-```bash
-python main.py
-```
+#### ขั้นตอนการรัน
+1. **Clone repository:**
+   ```bash
+   git clone https://github.com/Raririn01/antigravity_pet.git
+   cd antigravity_pet
+   ```
+2. **ติดตั้ง Dependencies:**
+   ดับเบิลคลิก `install.bat` หรือรัน:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **เปิดใช้งานสัตว์เลี้ยง:**
+   ดับเบิลคลิก `start_pet.bat` หรือ `run_pet.bat` (หรือสั่ง `python main.py`)
 
 ---
 

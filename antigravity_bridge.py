@@ -1,4 +1,5 @@
 import os
+import sys
 import glob
 import json
 import time
@@ -18,7 +19,10 @@ from spritesheet import validate_spritesheet
 from default_pet_generator import generate_custom_pet_sheet
 
 # Base directories
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    SCRIPT_DIR = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+else:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(SCRIPT_DIR, "assets")
 CATALOG_PATH = os.path.join(ASSETS_DIR, "custom_pets.json")
 CHAT_JOBS = {}
