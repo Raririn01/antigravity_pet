@@ -130,4 +130,4 @@ curl -X POST http://127.0.0.1:21420/state \
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the Non-Commercial & Attribution License ([MIT-NC / CC BY-NC](LICENSE)) - Free for personal use, attribution required, commercial sale prohibited.
