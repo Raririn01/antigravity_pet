@@ -10,15 +10,8 @@ import sys
 import argparse
 import ctypes
 
-# Ensure GUI attaches to the interactive user desktop (WinSta0\Default)
-if sys.platform == "win32":
-    try:
-        user32 = ctypes.windll.user32
-        h_desk_default = user32.OpenDesktopW("Default", 0, False, 0x01FF)
-        if h_desk_default:
-            user32.SetThreadDesktop(h_desk_default)
-    except Exception as e:
-        print(f"Warning: could not switch desktop: {e}")
+# Standard UTF-8 GUI initialization
+
 
 from PyQt6.QtWidgets import QApplication
 
@@ -51,8 +44,9 @@ def main():
         pet.set_scale(args.scale)
     app.setQuitOnLastWindowClosed(False)
     pet.show()
-    if not should_show:
-        pet.hide()
+    pet.raise_()
+    pet.activateWindow()
+    pet.set_visibility(True)
 
     print("Antigravity Desktop Pet is running!")
     print("- Left Click & Drag: Move anywhere on desktop")
