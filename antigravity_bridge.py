@@ -30,21 +30,39 @@ def run_quick_chat(job_id, prompt, conversation_id):
     if not cli or not os.path.isfile(cli):
         local_app_data = os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local")
         cli = os.path.join(local_app_data, "agy", "bin", "agy.exe")
-    args = [cli, "-p", prompt, "--output-format", "json", "--mode", "plan", "--sandbox", "--disable-slash-commands", "--print-timeout", "120s"]
+    args = [cli, "-p", prompt, "--output-format", "json", "--sandbox", "--disable-slash-commands", "--print-timeout", "120s"]
     if conversation_id:
         args.extend(["--conversation", conversation_id])
     try:
         if not os.path.isfile(cli):
             raise RuntimeError("ไม่พบ Antigravity CLI (agy.exe)")
-        result = subprocess.run(args, cwd=SCRIPT_DIR, capture_output=True, text=True, timeout=130,
-                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        result = subprocess.run(
+            args,
+            cwd=SCRIPT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=130,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
+        out = result.stdout or ""
+        err = result.stderr or ""
         if result.returncode:
-            raise RuntimeError((result.stderr or result.stdout or "Antigravity CLI failed").strip()[-500:])
-        payload = json.loads(result.stdout)
-        if payload.get("status") != "SUCCESS":
-            raise RuntimeError(str(payload.get("error") or payload.get("status") or "Antigravity did not finish"))
-        update = {"status": "done", "response": payload.get("response", ""),
-                  "conversation_id": payload.get("conversation_id", conversation_id)}
+            raise RuntimeError((err or out or "Antigravity CLI failed").strip()[-500:])
+        payload = {}
+        if "{" in out and "}" in out:
+            try:
+                payload = json.loads(out[out.find("{"):out.rfind("}") + 1])
+            except Exception:
+                pass
+        if payload.get("status") != "SUCCESS" and not payload.get("response"):
+            raise RuntimeError(str(payload.get("error") or payload.get("status") or (err or out or "Antigravity did not finish").strip()[:500]))
+        update = {
+            "status": "done",
+            "response": payload.get("response", "") or out.strip(),
+            "conversation_id": payload.get("conversation_id", conversation_id)
+        }
     except Exception as exc:
         update = {"status": "error", "error": str(exc)[:500]}
     with CHAT_LOCK:

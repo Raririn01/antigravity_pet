@@ -105,7 +105,7 @@ def get_recent_antigravity_conversations(limit: int = 8):
                     for line in f:
                         if '"USER_INPUT"' in line:
                             step = json.loads(line)
-                            c = step.get("content", "")
+                            c = str(step.get("content") or "")
                             if "<USER_REQUEST>" in c:
                                 c = c.split("<USER_REQUEST>")[1].split("</USER_REQUEST>")[0].strip()
                             title = c.replace("\n", " ")[:36].strip()
@@ -1062,19 +1062,34 @@ class DesktopPet(QWidget):
                 cli = os.path.join(os.environ.get("LOCALAPPDATA", ""), "agy", "bin", "agy.exe")
                 if not os.path.isfile(cli):
                     cli = "agy"
-                args = [cli, "-p", prompt, "--output-format", "json", "--mode", "plan", "--sandbox", "--disable-slash-commands", "--print-timeout", "120s"]
+                args = [cli, "-p", prompt, "--output-format", "json", "--sandbox", "--disable-slash-commands", "--print-timeout", "120s"]
                 if conversation_id:
                     args.extend(["--conversation", conversation_id])
 
-                res = subprocess.run(args, capture_output=True, text=True, timeout=120, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                res = subprocess.run(
+                    args,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=120,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                )
+                out = res.stdout or ""
+                err = res.stderr or ""
                 resp_text = ""
                 new_cid = conversation_id
-                try:
-                    payload = json.loads(res.stdout)
-                    resp_text = payload.get("response", "") or payload.get("error", "")
-                    new_cid = payload.get("conversation_id", conversation_id)
-                except Exception:
-                    resp_text = res.stdout.strip() or res.stderr.strip()
+                if "{" in out and "}" in out:
+                    try:
+                        json_str = out[out.find("{"):out.rfind("}") + 1]
+                        payload = json.loads(json_str)
+                        resp_text = payload.get("response", "") or payload.get("error", "")
+                        new_cid = payload.get("conversation_id", conversation_id)
+                    except Exception:
+                        pass
+
+                if not resp_text:
+                    resp_text = out.strip() or err.strip()
 
                 if new_cid:
                     sync_conversation_to_antigravity(new_cid)
@@ -1307,7 +1322,7 @@ class DesktopPet(QWidget):
             self.move(x, y)
 
     def set_action(self, action_name: str, message: str = "", force_reset: bool = False):
-        action = action_name.lower().strip()
+        action = str(action_name or "").lower().strip()
         aliases = {
             "work": "thinking",
             "curious": "thinking",
@@ -1363,7 +1378,7 @@ class DesktopPet(QWidget):
             return
 
         self.manual_action_expire_time = time.time() + 4.5
-        action = state.lower().strip()
+        action = str(state or "").lower().strip()
 
         if action in ("work", "thinking", "running"):
             self.th_main_label.setText(reason or "กำลังคิด...")
