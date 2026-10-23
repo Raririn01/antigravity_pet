@@ -52,3 +52,4 @@ Desktop.ini
 build/
 dist/
 *.spec
+*.zip
